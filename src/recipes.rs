@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path};
 // use std::collections::HashMap;
 
 use serde::{Deserialize};
@@ -29,10 +29,11 @@ pub struct Ingredient
 
 pub fn parse_from_file(path: &Path) -> std::io::Result<Vec<Recipe>>
 {
-	let file_contents = std::fs::read_to_string(path)?
+	let file_contents = std::fs::read_to_string(path)?;
+	let escaped = file_contents
 		.replace(r"\r", "")
 		.replace(&['\r', '\n'][..], "");
-	let parsed: Export = serde_json::from_str(&file_contents)?;
+	let parsed: Export = serde_json::from_str(&escaped)?;
 	let recipes = parsed.export_recipes;
 	Ok(recipes)
 }

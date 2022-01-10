@@ -1,11 +1,10 @@
 use std::path::PathBuf;
 
-use druid::widget::{Button, Flex, Label, ClipBox, List, Scroll, TextBox, Container};
-use druid::{Widget, WidgetExt, WindowDesc, Data, Lens, Env, Color, UnitPoint, Key, AppDelegate, Selector, Command};
-use druid::im::{HashMap, Vector};
+use druid::widget::{Button, Flex, Label, List, Scroll, TextBox};
+use druid::{Widget, WidgetExt, Data, Lens, Env, Color, Key, AppDelegate, Selector};
+use druid::im::{Vector};
 
-use rusqlite::{params, Connection};
-use serde::{Deserialize, Deserializer, Serialize};
+use super::{relics, db};
 
 const TEXT_COLOR: Key<Color> = Key::new("color");
 
@@ -15,24 +14,6 @@ const TEXT_COLOR: Key<Color> = Key::new("color");
 // {
 // 	deserializer.deserialize_seq();
 // }
-
-#[derive(Eq, PartialEq,Clone, Data, Lens, Default, Deserialize, Serialize)]
-struct Component
-{
-	name: String,
-	count: u32,
-	owned: u32,
-	#[serde(skip)]
-	relics: Vector<String>
-}
-impl Component
-{
-	fn new(name: String, count: u32) -> Self
-	{
-		Self{name, count,..Default::default()}
-	}
-}
-
 
 #[derive(Clone, Data, Lens, Default)]
 pub struct State
@@ -45,6 +26,46 @@ pub struct State
 	text: String
 }
 
+#[derive(Eq, PartialEq, Clone, Data, Lens, Default)]
+pub struct Tracked
+{
+	pub common_name: Option<String>,
+	pub unique_name: String,
+	pub recipe: (String, u32),
+	pub requires: Vector<Component>
+}
+
+impl Tracked
+{
+	fn new(common_name: Option<String>, unique_name: String, recipe_unique_name: String) -> Self
+	{
+		Self{
+			common_name,
+			unique_name,
+			recipe: (recipe_unique_name, 0),
+			requires: Default::default()
+		}
+	}
+}
+
+#[derive(Eq, PartialEq,Clone, Data, Lens, Default, Debug)]
+pub struct Component
+{
+	pub common_name: Option<String>,
+	pub unique_name: String,
+	pub count: u32,
+	pub owned: u32,
+	pub relics: Vector<(String, super::relics::Rarity)>
+}
+impl Component
+{
+	fn new(name: Option<String>, unique_name: String, count: u32) -> Self
+	{
+		Self{common_name: name, count, unique_name,..Default::default()}
+	}
+}
+
+
 pub fn builder() -> impl Widget<State>
 {
 	let mut root = Flex::column();
@@ -55,19 +76,23 @@ pub fn builder() -> impl Widget<State>
 		.with_child(TextBox::new().lens(State::text))
 		.with_child(Button::new("Add")
 			.on_click(|_, state: &mut State, _|{
-				let name = state.text.clone();
+				let common_name = state.text.to_ascii_uppercase();
 				let mut db = rusqlite::Connection::open(&state.db_path).unwrap();
-				let requirements = super::db::requirements(&mut db, &name).unwrap();
-				if requirements.len() <=1
-				{
-					eprintln!("{} not found", name);
-					return
-				}
-				let mut tracked = Tracked::new(name);
+				let (unique_name, unique_recipe_name) = db::find_unique_with_recipe(&db, &common_name).unwrap();
+				// let unique_name = db::unique_name_main(&mut db, &common_name).unwrap();
+				let requirements = super::db::requirements(&mut db, &unique_recipe_name).unwrap();
+				let mut tracked = Tracked::new(Some(common_name.clone()), unique_name, unique_recipe_name);
 				for r in requirements
 				{
-					// let relics = super::db::relics(&mut db, &r.0);
-					tracked.requires.push_back(Component::new(r.0, r.1));
+					let common_name = r.0
+						.as_ref()
+						.map(|r|r.trim_start_matches(&common_name))
+						.map(|n|n.trim_start())
+						.map(|r|r.to_owned());
+					let relics = super::db::relics(&mut db, &r.1).unwrap();
+					let mut com = Component::new(common_name, r.1, r.2);
+					com.relics.extend(relics);
+					tracked.requires.push_back(com);
 				}
 				state.tracked_recipes.push_back(tracked);}));
 	header.add_child(add);
@@ -79,58 +104,16 @@ pub fn builder() -> impl Widget<State>
 	root
 }
 
-// ugly hack to deserialize `Vec` into `Vector`
-// TODO: find better way
-#[derive(Eq, PartialEq, Clone, Default, Deserialize, Serialize)]
-struct TrackedHack
-{
-	name: String,
-	requires: Vec<Component>
-}
-
-impl From<Tracked> for TrackedHack
-{
-	fn from(a: Tracked) -> Self {
-		Self{name: a.name, requires: a.requires.iter().cloned().collect()}
-	}
-}
-
-#[derive(Eq, PartialEq, Clone, Data, Lens, Default, Deserialize, Serialize)]
-#[serde(from = "TrackedHack", into="TrackedHack")]
-pub struct Tracked
-{
-	name: String,
-	requires: Vector<Component>
-}
-
-impl Tracked
-{
-	fn new(name: String) -> Self
-	{
-		Self{
-			name,
-			requires: Default::default()
-		}
-	}
-}
-
-impl From<TrackedHack> for Tracked
-{
-	fn from(a: TrackedHack) -> Self {
-		Self{name: a.name, requires: a.requires.into()}
-	}
-}
-
 fn tracked() -> impl Widget<Tracked>
 {
 	let mut root = Flex::column();
 	let header = Flex::row()
 		.with_flex_child(
-			Label::dynamic(|data: &Tracked, _|data.name.clone())
+			Label::dynamic(|data: &Tracked, _|data.common_name.clone().unwrap_or(data.unique_name.clone()))
 				.with_text_size(24.0), 1.0);
 	root.add_child(header.align_left());
 	root.add_default_spacer();
-	let requires = List::new(requires)
+	let requires = List::new(component)
 		.lens(Tracked::requires);
 	root.add_child(requires);
 	root.add_child(
@@ -138,12 +121,12 @@ fn tracked() -> impl Widget<Tracked>
 			.on_click(|ctx, t: &mut Tracked, _|
 			{
 				ctx.submit_command(
-					Selector::new("Untrack")
-						.with(t.name.clone()))}));
+					UNTRACK_SELECTOR
+						.with(t.common_name.clone().unwrap()))}));
 	root.border(Color::WHITE, 1.0).rounded(5.0).fix_width(200.0)
 }
 
-fn requires() -> impl Widget<Component>
+fn component() -> impl Widget<Component>
 {
 	fn greyout(env: &mut druid::Env, data: &Component)
 	{
@@ -160,15 +143,18 @@ fn requires() -> impl Widget<Component>
 	let mut root = Flex::column();
 	let mut header = Flex::row();
 	header.add_flex_child(
-		Label::dynamic(|data: &Component, _|data.name.clone())
+		Label::dynamic(|data: &Component, _|data.common_name.clone().unwrap_or(data.unique_name.clone()))
 			.with_text_size(20.0)
 			.with_text_color(TEXT_COLOR)
 			.env_scope(greyout)
 			.align_left(), 1.0);
-	header.add_child(Button::new("-").on_click(|_, c: &mut Component, _|c.owned = c.owned.saturating_sub(1)));
-	header.add_child(Button::new("+").on_click(|_, c: &mut Component, _|c.owned = c.owned.saturating_add(1)));
 	root.add_child(header);
-
+	let buttons = Flex::row()	
+		.with_child(Button::new("-").on_click(|_, c: &mut Component, _|c.owned = c.owned.saturating_sub(1)))
+		.with_child(Button::new("+").on_click(|_, c: &mut Component, _|c.owned = c.owned.saturating_add(1)))
+		.align_right()
+		.expand_width();
+	root.add_child(buttons);
 	let requires = Flex::row()
 		.with_flex_child(
 			Label::new("Requires:")
@@ -196,16 +182,28 @@ fn requires() -> impl Widget<Component>
 				.align_right());
 	root.add_child(have);
 
-	// let relics = List::new(
-	// 	||Label::dynamic(|d: &String, _|d.clone()).with_text_color(TEXT_COLOR))
-	// 	.lens(Component::relics);
-	// root.add_child(relics);
+	let relics = List::new(||{
+			Label::dynamic(|d: &(String, relics::Rarity), _|{d.0.clone()})
+				.with_text_color(TEXT_COLOR)
+				.env_scope(|e, d|{
+					use relics::Rarity;
+					let color = match d.1
+					{
+						Rarity::COMMON=>Color::OLIVE,
+						Rarity::UNCOMMON=>Color::SILVER,
+						Rarity::RARE=>Color::YELLOW
+					};
+					e.set(TEXT_COLOR, color);
+				})})
+		.lens(Component::relics);
+	root.add_child(relics);
 
 	root.add_default_spacer();
 	root
 }
 
 pub struct Delegate;
+const UNTRACK_SELECTOR: Selector<String> = Selector::new("Untrack");
 
 impl AppDelegate<State> for Delegate
 {
@@ -218,12 +216,11 @@ impl AppDelegate<State> for Delegate
 		env: &Env
 	) -> druid::Handled {
 		use druid::Handled;
-		let untrack_selector: Selector<String> = Selector::new("Untrack");
-		if let Some(name) = cmd.get(untrack_selector)
+		if let Some(name) = cmd.get(UNTRACK_SELECTOR)
 		{
 			let tracked = &mut data.tracked_recipes;
 			let to_remove = tracked.iter()
-				.position(|t|t.name == *name)
+				.position(|t|t.common_name.as_ref() == Some(name))
 				.expect("Recipe not found");
 			tracked.remove(to_remove);
 			return Handled::Yes
@@ -231,10 +228,8 @@ impl AppDelegate<State> for Delegate
 
 		if cmd.get(druid::commands::CLOSE_WINDOW).is_some()
 		{
-			let tracked: Vec<_> = data.tracked_recipes.iter().cloned().collect();
-			let path = &data.tracked_path;
-			let mut buf = std::io::BufWriter::new(std::fs::File::create(path).unwrap());
-			serde_json::to_writer(&mut buf, &tracked).expect("failed to write json");
+			// let tracked: Vec<_> = data.tracked_recipes.iter().cloned().collect();
+			super::persistance::save(&data.tracked_path, &data.tracked_recipes).unwrap();
 			return Handled::No
 		}
 

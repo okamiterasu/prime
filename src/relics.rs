@@ -1,9 +1,10 @@
-use std::path::Path;
+use std::path::{Path};
 // use std::collections::HashMap;
 
+use druid::Data;
 use serde::{Deserialize};
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Data)]
 pub enum Rarity
 {
 	COMMON,
@@ -19,6 +20,20 @@ impl Rarity
 			Self::COMMON=>"COMMON",
 			Self::UNCOMMON=>"UNCOMMON",
 			Self::RARE=>"RARE"
+		}
+	}
+}
+impl TryFrom<&str> for Rarity
+{
+	type Error = ();
+	fn try_from(i: &str) -> Result<Self, Self::Error>
+	{
+		match i
+		{
+			"COMMON"=>Ok(Self::COMMON),
+			"UNCOMMON"=>Ok(Self::UNCOMMON),
+			"RARE"=>Ok(Self::RARE),
+			_=>Err(())
 		}
 	}
 }
@@ -70,14 +85,14 @@ pub struct Reward
 
 pub fn parse_from_file(path: &Path) -> std::io::Result<Vec<Relic>>
 {
-	let file_contents = std::fs::read_to_string(path)?
+	let file_contents = std::fs::read_to_string(path)?;
+	let escaped = file_contents
 		.replace(r"\r", "")
 		.replace(&['\r', '\n'][..], "");
-	let parsed: Export = serde_json::from_str(&file_contents)?;
+	let parsed: Export = serde_json::from_str(&escaped)?;
 	let relicarcanes = parsed.export_relic_arcane;
 	let relics = relicarcanes.into_iter()
 		.filter_map(|r|r.try_into().ok())
 		.collect();
-	// println!("{:?}", relics);
 	Ok(relics)
 }
