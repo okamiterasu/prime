@@ -5,7 +5,7 @@ use std::io;
 use lzma_rs::lzma_decompress;
 const EXPORT: &str = "https://content.warframe.com/PublicExport";
 const MANIFEST_TEMPLATE: &str = "https://content.warframe.com/PublicExport/Manifest";
-
+const WORLDSTATE: &str = "https://content.warframe.com/dynamic/worldState.php";
 
 // fn main() -> std::io::Result<()>{
 
@@ -41,4 +41,12 @@ pub fn index() -> io::Result<String>
 		&mut decompressed).unwrap();
 	String::from_utf8(decompressed)
 		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))
+}
+
+pub fn worldstate() -> io::Result<String>
+{
+	let response = ureq::get(WORLDSTATE)
+		.call()
+		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+	response.into_string()
 }

@@ -1,3 +1,4 @@
+use core::panic;
 use std::io;
 use std::path::{PathBuf, Path};
 
@@ -15,6 +16,8 @@ mod db;
 mod relics;
 mod resources;
 mod persistance;
+mod droptable;
+mod worldstate;
 
 #[cfg(target_os = "windows")]
 fn cache_dir() -> PathBuf
@@ -57,8 +60,6 @@ fn main() -> io::Result<()>
 	{
 		std::fs::create_dir(&cache_dir)?;
 	}
-	
-	
 	
 	let endpoints = endpoints(&cache_dir)?;
 	let mut db = setup::db(&cache_dir.join("db.sqlite")).unwrap();

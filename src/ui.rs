@@ -6,6 +6,10 @@ use druid::im::{Vector};
 
 use super::{relics, db};
 
+const BRONZE: Color = Color::rgb8(0xB0, 0x65, 0x00);
+const SILVER: Color = Color::rgb8(0xC0, 0xC0, 0xC0);
+const GOLD: Color = Color::rgb8(0xFF, 0xD7, 0x00);
+
 const TEXT_COLOR: Key<Color> = Key::new("color");
 
 // fn des_vector<'de, D, O>(deserializer: D) -> Result<Vector<O>, D::Error>
@@ -55,7 +59,8 @@ pub struct Component
 	pub unique_name: String,
 	pub count: u32,
 	pub owned: u32,
-	pub relics: Vector<(String, super::relics::Rarity)>
+	pub active_relics: Vector<(String, super::relics::Rarity)>,
+	pub resurgence_relics: Vector<(String, super::relics::Rarity)>
 }
 impl Component
 {
@@ -89,9 +94,11 @@ pub fn builder() -> impl Widget<State>
 						.map(|r|r.trim_start_matches(&common_name))
 						.map(|n|n.trim_start())
 						.map(|r|r.to_owned());
-					let relics = super::db::relics(&mut db, &r.1).unwrap();
+					let active_relics = super::db::active_relics(&mut db, &r.1).unwrap();
+					let resurgence_relics = super::db::resurgence_relics(&mut db, &r.1).unwrap();
 					let mut com = Component::new(common_name, r.1, r.2);
-					com.relics.extend(relics);
+					com.active_relics.extend(active_relics);
+					com.resurgence_relics.extend(resurgence_relics);
 					tracked.requires.push_back(com);
 				}
 				state.tracked_recipes.push_back(tracked);}));
@@ -182,7 +189,10 @@ fn component() -> impl Widget<Component>
 				.align_right());
 	root.add_child(have);
 
-	let relics = List::new(||{
+	{
+		let mut active_relics = Flex::column()
+			.with_child(Label::new("Active Relics").align_left().expand_width());
+		let list = List::new(||{
 			Label::dynamic(|d: &(String, relics::Rarity), _|{d.0.clone()})
 				.with_text_color(TEXT_COLOR)
 				.env_scope(|e, d|{
@@ -194,9 +204,32 @@ fn component() -> impl Widget<Component>
 						Rarity::RARE=>Color::YELLOW
 					};
 					e.set(TEXT_COLOR, color);
-				})})
-		.lens(Component::relics);
-	root.add_child(relics);
+				}).align_right().expand_width()}).lens(Component::active_relics);
+		active_relics.add_child(list);
+		root.add_child(active_relics);
+		root.add_default_spacer();
+	}
+
+	{
+		let mut resurgence_relics = Flex::column()
+			.with_child(Label::new("Resurgence Relics").align_left().expand_width());
+		let list = List::new(||{
+			Label::dynamic(|d: &(String, relics::Rarity), _|{d.0.clone()})
+				.with_text_color(TEXT_COLOR)
+				.env_scope(|e, d|{
+					use relics::Rarity;
+					let color = match d.1
+					{
+						Rarity::COMMON=>BRONZE,
+						Rarity::UNCOMMON=>SILVER,
+						Rarity::RARE=>GOLD
+					};
+					e.set(TEXT_COLOR, color);
+				}).align_right().expand_width()}).lens(Component::resurgence_relics);
+		resurgence_relics.add_child(list);
+		root.add_child(resurgence_relics);
+		root.add_default_spacer();
+	}
 
 	root.add_default_spacer();
 	root

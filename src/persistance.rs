@@ -72,7 +72,6 @@ impl Component
 {
 	pub fn into_ui(self, parent_common_name: Option<&String>, parent_recipe_unique_name: &str, db: &mut Connection) -> ui::Component
 	{
-		dbg!(&self);
 		let common_name = db::common_name(db, &self.unique_name)
 			.unwrap()
 			.as_ref()
@@ -80,14 +79,16 @@ impl Component
 			.map(|n|n.trim_start())
 			.map(|n|n.to_owned());
 		let count = db::how_many_needed(db, parent_recipe_unique_name, &self.unique_name).unwrap();
-		let relics = db::relics(db, &self.unique_name).unwrap().into();
+		let active_relics = db::active_relics(db, &self.unique_name).unwrap().into();
+		let resurgence_relics = db::resurgence_relics(db, &self.unique_name).unwrap().into();
 		ui::Component
 		{
 			common_name,
 			unique_name: self.unique_name,
 			owned: self.owned,
 			count,
-			relics
+			active_relics,
+			resurgence_relics
 		}
 	}
 }

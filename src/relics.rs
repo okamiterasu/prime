@@ -4,7 +4,7 @@ use std::path::{Path};
 use druid::Data;
 use serde::{Deserialize};
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Data)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Data, Hash)]
 pub enum Rarity
 {
 	COMMON,

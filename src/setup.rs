@@ -1,7 +1,7 @@
 use std::path::{Path};
 use druid::LensExt;
 use rusqlite::{params, Connection, Transaction};
-use crate::db;
+use crate::{db, droptable, worldstate};
 
 
 pub fn db(path: &Path) -> rusqlite::Result<Connection>
@@ -37,7 +37,9 @@ pub fn db(path: &Path) -> rusqlite::Result<Connection>
 	db.execute(r#"CREATE TABLE IF NOT EXISTS RELIC
 	(
 		unique_name TEXT PRIMARY KEY,
-		name		TEXT NOT NULL
+		name		TEXT NOT NULL,
+		active		BOOLEAN DEFAULT FALSE,
+		resurgence	BOOLEAN DEFAULT FALSE
 	)"#, [])?;
 
 	db.execute(r#"CREATE TABLE IF NOT EXISTS RELIC_REWARD
@@ -100,35 +102,6 @@ pub fn recipes(cache_dir: &Path, endpoints: &[String], db: &mut Connection) -> r
 		}
 	}
 	t.commit()?;
-	
-	// let t = rusqlite::Transaction::new(db, rusqlite::TransactionBehavior::Deferred)?;
-	// for recipe in recipes
-	// {
-	// 	if let Some(common_name) = bp_common_name(&t, &recipe.result_type)?
-	// 	{
-	// 		dbg!(&common_name);
-	// 		t.execute(r#"
-	// 			INSERT OR REPLACE INTO BLUEPRINT (unique_name, name)
-	// 				VALUES (?1, ?2)"#,
-	// 			params![
-	// 				recipe.unique_name,
-	// 				common_name])?;
-	// 		for ingredient in recipe.ingredients
-	// 		{
-	// 			dbg!(&ingredient);
-	// 			if let Some(common_name) = db::common_name(&t, &ingredient.item_type)?
-	// 			{
-	// 				t.execute(r#"
-	// 				INSERT OR REPLACE INTO BLUEPRINT (unique_name, name)
-	// 					VALUES (?1, ?2)"#,
-	// 					params![
-	// 						ingredient.item_type,
-	// 						common_name])?;
-	// 			}
-	// 		}
-	// 	};
-	// }
-	// t.commit()?;
 	Ok(())
 }
 
@@ -200,16 +173,21 @@ pub fn relics(cache_dir: &Path, endpoints: &[String], db: &mut Connection) -> ru
 		let manifest = super::live::load_manifest(&relic_endpoint).unwrap();
 		std::fs::write(&relic_path, &manifest).unwrap();
 	}
-
+	let active_relics = droptable::active_relics(&cache_dir.join("drops.html")).unwrap();
+	let resurgence_relics = worldstate::resurgence_relics(&cache_dir.join("worldstate.json")).unwrap();
 	let t = rusqlite::Transaction::new(db, rusqlite::TransactionBehavior::Deferred)?;
 	for relic in super::relics::parse_from_file(&cache_dir.join(relic_endpoint)).unwrap()
 	{
+		let active = active_relics.contains(&relic.name);
+		let resurgence = resurgence_relics.contains(&relic.unique_name);
 		t.execute(r#"
-		INSERT OR REPLACE INTO RELIC (unique_name, name)
-		VALUES (?1, ?2)"#,
+		INSERT OR REPLACE INTO RELIC (unique_name, name, active, resurgence)
+		VALUES (?1, ?2, ?3, ?4)"#,
 		params![
 			relic.unique_name,
-			relic.name])?;
+			relic.name,
+			active,
+			resurgence])?;
 		for reward in relic.relic_rewards
 		{
 			let reward_name: String = reward.reward_name.split("/")
@@ -220,7 +198,7 @@ pub fn relics(cache_dir: &Path, endpoints: &[String], db: &mut Connection) -> ru
 				INSERT OR REPLACE INTO RELIC_REWARD (relic, name, rarity)
 				VALUES (?1, ?2, ?3)"#,
 				params![
-					relic.name,
+					relic.unique_name,
 					reward_name,
 					reward.rarity.as_str()])?;
 		}
