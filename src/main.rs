@@ -1,10 +1,9 @@
-use core::panic;
 use std::io;
 use std::path::{PathBuf, Path};
 
-use druid::im::Vector;
-use rusqlite::{params, Connection};
 use druid::{AppLauncher, WindowDesc};
+
+// use anyhow::Result;
 
 mod live;
 mod recipes;
@@ -53,7 +52,7 @@ fn endpoints(path: &Path) -> io::Result<Vec<String>>
 	Ok(endpoints)
 }
 
-fn main() -> io::Result<()>
+fn main() -> anyhow::Result<()>
 {
 	let cache_dir = cache_dir();
 	if !cache_dir.exists()
@@ -63,22 +62,22 @@ fn main() -> io::Result<()>
 	
 	let endpoints = endpoints(&cache_dir)?;
 	let mut db = setup::db(&cache_dir.join("db.sqlite")).unwrap();
-	setup::resources(&cache_dir, &endpoints, &mut db).unwrap();
-	setup::warframes(&cache_dir, &endpoints, &mut db).unwrap();
-	setup::weapons(&cache_dir, &endpoints, &mut db).unwrap();
-	setup::relics(&cache_dir, &endpoints, &mut db).unwrap();
-	setup::recipes(&cache_dir, &endpoints, &mut db).unwrap();
+	setup::resources(&cache_dir, &endpoints, &mut db)?;
+	setup::warframes(&cache_dir, &endpoints, &mut db)?;
+	setup::weapons(&cache_dir, &endpoints, &mut db)?;
+	setup::relics(&cache_dir, &endpoints, &mut db)?;
+	setup::recipes(&cache_dir, &endpoints, &mut db)?;
 
 	let ui_state = persistance::load(&cache_dir.join("tracked.json"), &mut db)?;
 
 	let window = WindowDesc::new(ui::builder)
 		.title("Prime Tracker")
-		.window_size((800.0, 600.0));
+		.window_size((800.0, 800.0));
 
 	AppLauncher::with_window(window)
 		.use_simple_logger()
 		.delegate(ui::Delegate)
-		.launch(ui_state).unwrap();
+		.launch(ui_state)?;
 
 	Ok(())
 }

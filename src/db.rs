@@ -1,35 +1,14 @@
 use std::collections::HashSet;
 
-use rusqlite::{Connection, params};
+use rusqlite::Connection;
 
 use crate::relics;
 
-enum Trilean
+enum Ternary
 {
-	Yes,
-	No,
+	True,
+	False,
 	Whatever
-}
-
-pub fn find_unique_with_recipe(db: &Connection, common_name: &str) -> rusqlite::Result<(String, String)>
-{
-	let mut query = db.prepare(r#"
-		SELECT T1.unique_name, RECIPE.unique_name
-			FROM (
-				SELECT name, unique_name
-					FROM WARFRAME
-				UNION
-				SELECT name, unique_name
-					FROM WEAPON
-				UNION
-				SELECT name, unique_name
-					FROM RESOURCE
-			) T1
-			INNER JOIN RECIPE
-				ON T1.unique_name = RECIPE.result_type
-		WHERE T1.name = ?"#)?;
-	let response = query.query_row([common_name], |r|Ok((r.get(0)?, r.get(1)?)))?;
-	Ok(response)
 }
 
 pub fn requirements(db: &Connection, recipe_unique_name: &str) -> rusqlite::Result<Vec<(Option<String>, String, u32)>>
@@ -44,11 +23,12 @@ pub fn requirements(db: &Connection, recipe_unique_name: &str) -> rusqlite::Resu
 		item_count ASC,
 		REQUIRES.item_type ASC"#)?;
 		
-	let response = components.query_map([recipe_unique_name], |r|{
+	let response = components.query([recipe_unique_name])?
+		.mapped(|r|{
 			let common_name = r.get(0)?;
 			let unique_name = r.get(1)?;
 			let count = r.get(2)?;
-			Ok((common_name, unique_name, count))})?
+			Ok((common_name, unique_name, count))})
 		.flatten()
 		.collect();
 	Ok(response)
@@ -96,23 +76,6 @@ pub fn unique_name(db: &Connection, common_name: &str) -> rusqlite::Result<Strin
 	Ok(response)
 }
 
-pub fn unique_name_main(db: &Connection, common_name: &str) -> rusqlite::Result<String>
-{
-	let mut query = db.prepare(r#"
-	SELECT T1.unique_name
-		FROM
-		(
-			SELECT WARFRAME.name, WARFRAME.unique_name
-				FROM WARFRAME
-			UNION
-			SELECT WEAPON.name, WEAPON.unique_name
-				FROM WEAPON
-		) T1
-	WHERE T1.name LIKE '%'||?"#)?;
-	let response: String = query.query_row([common_name], |r|r.get(0))?;
-	Ok(response)
-}
-
 pub fn how_many_needed(db: &Connection, recipe_unique_name: &str, resource_unique_name: &str) -> rusqlite::Result<u32>
 {
 	let mut query = db.prepare(r#"
@@ -121,29 +84,18 @@ pub fn how_many_needed(db: &Connection, recipe_unique_name: &str, resource_uniqu
 		WHERE
 			REQUIRES.recipe_unique_name = ?1 AND
 			REQUIRES.item_type = ?2"#)?;
-
-	let response: u32 = query
-		.query_row([recipe_unique_name, resource_unique_name], |r|r.get(0))
-		.unwrap();
+	let response: u32 = query.query_row(
+		[recipe_unique_name, resource_unique_name],
+		|r|r.get(0))?;
 	Ok(response)
-}
-
-pub fn relics(db: &Connection, unique_name: &str) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
-{
-	let mut relics = Vec::new();
-	let component_relics = component_relics(db, unique_name, Trilean::Whatever, Trilean::Whatever)?;
-	relics.extend(component_relics);
-	let recipe_relics = recipe_relics(db, unique_name, Trilean::Whatever, Trilean::Whatever)?;
-	relics.extend(recipe_relics);
-	Ok(relics)
 }
 
 pub fn active_relics(db: &Connection, unique_name: &str) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
 {
 	let mut relics = HashSet::new();
-	let component_relics = component_relics(db, unique_name, Trilean::Yes, Trilean::Whatever)?;
+	let component_relics = component_relics(db, unique_name, Ternary::True, Ternary::Whatever)?;
 	relics.extend(component_relics);
-	let recipe_relics = recipe_relics(db, unique_name, Trilean::Yes, Trilean::Whatever)?;
+	let recipe_relics = recipe_relics(db, unique_name, Ternary::True, Ternary::Whatever)?;
 	relics.extend(recipe_relics);
 	Ok(relics.into_iter().collect())
 }
@@ -151,14 +103,14 @@ pub fn active_relics(db: &Connection, unique_name: &str) -> rusqlite::Result<Vec
 pub fn resurgence_relics(db: &Connection, unique_name: &str) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
 {
 	let mut relics = HashSet::new();
-	let component_relics = component_relics(db, unique_name, Trilean::Whatever, Trilean::Yes)?;
+	let component_relics = component_relics(db, unique_name, Ternary::Whatever, Ternary::True)?;
 	relics.extend(component_relics);
-	let recipe_relics = recipe_relics(db, unique_name, Trilean::Whatever, Trilean::Yes)?;
+	let recipe_relics = recipe_relics(db, unique_name, Ternary::Whatever, Ternary::True)?;
 	relics.extend(recipe_relics);
 	Ok(relics.into_iter().collect())
 }
 
-fn component_relics(db: &Connection, component_unique_name: &str, active: Trilean, resurgence: Trilean) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
+fn component_relics(db: &Connection, component_unique_name: &str, active: Ternary, resurgence: Ternary) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
 {
 	let mut statement = r#"
 	SELECT RELIC.name, RELIC_REWARD.rarity
@@ -170,16 +122,16 @@ fn component_relics(db: &Connection, component_unique_name: &str, active: Trilea
 
 	match active
 	{
-		Trilean::Yes=>statement.push_str(" AND RELIC.active = TRUE"),
-		Trilean::No=>statement.push_str(" AND RELIC.active = FALSE"),
-		Trilean::Whatever=>(),
+		Ternary::True=>statement.push_str(" AND RELIC.active = TRUE"),
+		Ternary::False=>statement.push_str(" AND RELIC.active = FALSE"),
+		Ternary::Whatever=>(),
 	}
 
 	match resurgence
 	{
-		Trilean::Yes=>statement.push_str(" AND RELIC.resurgence = TRUE"),
-		Trilean::No=>statement.push_str(" AND RELIC.resurgence = FALSE"),
-		Trilean::Whatever=>(),
+		Ternary::True=>statement.push_str(" AND RELIC.resurgence = TRUE"),
+		Ternary::False=>statement.push_str(" AND RELIC.resurgence = FALSE"),
+		Ternary::Whatever=>(),
 	}
 
 	let mut query = db.prepare(&statement)?;
@@ -195,7 +147,7 @@ fn component_relics(db: &Connection, component_unique_name: &str, active: Trilea
 	Ok(response)
 }
 
-fn recipe_relics(db: &Connection, result_unique_name: &str, active: Trilean, resurgence: Trilean) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
+fn recipe_relics(db: &Connection, result_unique_name: &str, active: Ternary, resurgence: Ternary) -> rusqlite::Result<Vec<(String, relics::Rarity)>>
 {
 	let mut statement = r#"
 	SELECT RELIC.name, RELIC_REWARD.rarity
@@ -208,16 +160,16 @@ fn recipe_relics(db: &Connection, result_unique_name: &str, active: Trilean, res
 
 	match active
 	{
-		Trilean::Yes=>statement.push_str(" AND RELIC.active = TRUE"),
-		Trilean::No=>statement.push_str(" AND RELIC.active = FALSE"),
-		Trilean::Whatever=>(),
+		Ternary::True=>statement.push_str(" AND RELIC.active = TRUE"),
+		Ternary::False=>statement.push_str(" AND RELIC.active = FALSE"),
+		Ternary::Whatever=>(),
 	}
 
 	match resurgence
 	{
-		Trilean::Yes=>statement.push_str(" AND RELIC.resurgence = TRUE"),
-		Trilean::No=>statement.push_str(" AND RELIC.resurgence = FALSE"),
-		Trilean::Whatever=>(),
+		Ternary::True=>statement.push_str(" AND RELIC.resurgence = TRUE"),
+		Ternary::False=>statement.push_str(" AND RELIC.resurgence = FALSE"),
+		Ternary::Whatever=>(),
 	}
 
 	let mut query = db.prepare(&statement)?;
@@ -231,4 +183,13 @@ fn recipe_relics(db: &Connection, result_unique_name: &str, active: Trilean, res
 		.flatten()
 		.collect();
 	Ok(response)
+}
+
+pub fn recipe(db: &Connection, result_unique_name: &str) -> rusqlite::Result<String>
+{
+	let mut query = db.prepare(r#"
+		SELECT unique_name
+			FROM RECIPE
+		WHERE result_type = ?"#)?;	
+	query.query_row([result_unique_name],|r|r.get(0))
 }

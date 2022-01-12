@@ -1,7 +1,6 @@
 use std::path::{Path};
-use druid::LensExt;
-use rusqlite::{params, Connection, Transaction};
-use crate::{db, droptable, worldstate};
+use rusqlite::{params, Connection};
+use crate::{droptable, worldstate};
 
 
 pub fn db(path: &Path) -> rusqlite::Result<Connection>

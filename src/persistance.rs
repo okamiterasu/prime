@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 use super::ui;
 use super::db;
 
-#[derive(Eq, PartialEq, Clone, Default, Deserialize, Serialize)]
+#[derive(Eq, PartialEq, Clone, Default, Deserialize, Serialize, Debug)]
 struct Tracked
 {
 	unique_name: String,
-	recipe: (String, u32),
+	recipe: Component,
 	components: Vec<Component>
 }
 
@@ -25,7 +25,7 @@ impl From<ui::Tracked> for Tracked
 		Self
 		{
 			unique_name: i.unique_name,
-			recipe: i.recipe,
+			recipe: i.recipe.into(),
 			components
 		}
 	}
@@ -33,19 +33,33 @@ impl From<ui::Tracked> for Tracked
 
 impl Tracked
 {
-	pub fn into_ui(self, db: &mut Connection) -> ui::Tracked
+	pub fn into_ui(mut self, db: &mut Connection) -> rusqlite::Result<ui::Tracked>
 	{
-		let common_name = db::common_name(db, &self.unique_name).unwrap();
-		let requires = self.components.into_iter()
-			.map(|c|c.into_ui(common_name.as_ref(), &self.recipe.0, db))
+		let common_name = db::common_name(db, &self.unique_name)?;
+		// let recipe_unique_name = db::recipe(db, &self.unique_name)?;
+		let requires = std::mem::take(&mut self.components)
+			.into_iter()
+			.map(|c|{
+				c.into_ui(
+					common_name.as_ref(),
+					&self.recipe.unique_name,
+					db,
+					false)}
+			).flatten()
 			.collect();
-		ui::Tracked
+		let recipe_unique_name = &self.recipe.unique_name.to_owned();
+		let tracked = ui::Tracked
 		{
 			unique_name: self.unique_name,
-			recipe: self.recipe,
+			recipe: self.recipe.into_ui(
+				common_name.as_ref(),
+				recipe_unique_name,
+				db,
+				true)?,
 			common_name,
 			requires
-		}
+		};
+		Ok(tracked)
 	}
 }
 
@@ -70,44 +84,39 @@ impl From<ui::Component> for Component
 
 impl Component
 {
-	pub fn into_ui(self, parent_common_name: Option<&String>, parent_recipe_unique_name: &str, db: &mut Connection) -> ui::Component
+	pub fn into_ui(self, parent_common_name: Option<&String>, parent_recipe_unique_name: &str, db: &mut Connection, main_bp: bool) -> rusqlite::Result<ui::Component>
 	{
-		let common_name = db::common_name(db, &self.unique_name)
-			.unwrap()
-			.as_ref()
-			.map(|n|n.trim_start_matches(parent_common_name.unwrap()))
-			.map(|n|n.trim_start())
-			.map(|n|n.to_owned());
-		let count = db::how_many_needed(db, parent_recipe_unique_name, &self.unique_name).unwrap();
-		let active_relics = db::active_relics(db, &self.unique_name).unwrap().into();
-		let resurgence_relics = db::resurgence_relics(db, &self.unique_name).unwrap().into();
-		ui::Component
-		{
-			common_name,
-			unique_name: self.unique_name,
-			owned: self.owned,
-			count,
-			active_relics,
-			resurgence_relics
-		}
+		let mut com = ui::Component::new(
+			db,
+			parent_recipe_unique_name,
+			self.unique_name,
+			parent_common_name.unwrap(),
+			main_bp)?;
+		com.owned = self.owned;
+		Ok(com)
 	}
 }
 
 pub fn load(tracked_path: &Path, db: &mut Connection) -> io::Result<ui::State>
 {
-	use std::io::BufReader;
-	use std::fs::File;
+	dbg!(tracked_path);
 	let mut ui_state = ui::State::default();
 	ui_state.db_path = db.path().expect("Empty DB Path").to_owned();
 	ui_state.tracked_path = tracked_path.to_owned();
+	dbg!(tracked_path.exists());
 	if !tracked_path.exists()
 	{
 		return Ok(ui_state)
 	}
+	dbg!(tracked_path.is_file());
 
-	let reader = BufReader::new(File::open(tracked_path)?);
-	let parsed: Vec<Tracked> = serde_json::from_reader(reader)?;
-	ui_state.tracked_recipes = parsed.into_iter().map(|t|t.into_ui(db)).collect();
+	let contents = std::fs::read_to_string(tracked_path)?;
+	let parsed: Vec<Tracked> = serde_json::from_str(&contents)?;
+	ui_state.tracked_recipes = parsed.into_iter()
+		.map(|t|t.into_ui(db))
+		.inspect(|t|{dbg!(t);})
+		.flatten()
+		.collect();
 	Ok(ui_state)
 }
 
