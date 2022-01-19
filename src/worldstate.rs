@@ -7,6 +7,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize};
 
+use crate::live;
+
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 struct State
@@ -30,6 +32,12 @@ pub struct Item
 
 pub fn resurgence_relics(file_path: &Path) -> std::io::Result<HashSet<String>>
 {
+	if !file_path.exists()
+	{
+		let state = live::worldstate()?;
+		std::fs::write(file_path, &state).unwrap();
+	}
+
 	let reader = BufReader::new(File::open(file_path)?);
 	let world_state: State = serde_json::from_reader(reader)?;
 	let relics = world_state.prime_vault_traders.iter()

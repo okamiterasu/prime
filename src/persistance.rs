@@ -99,22 +99,18 @@ impl Component
 
 pub fn load(tracked_path: &Path, db: &mut Connection) -> io::Result<ui::State>
 {
-	dbg!(tracked_path);
 	let mut ui_state = ui::State::default();
 	ui_state.db_path = db.path().expect("Empty DB Path").to_owned();
 	ui_state.tracked_path = tracked_path.to_owned();
-	dbg!(tracked_path.exists());
 	if !tracked_path.exists()
 	{
 		return Ok(ui_state)
 	}
-	dbg!(tracked_path.is_file());
 
 	let contents = std::fs::read_to_string(tracked_path)?;
 	let parsed: Vec<Tracked> = serde_json::from_str(&contents)?;
 	ui_state.tracked_recipes = parsed.into_iter()
 		.map(|t|t.into_ui(db))
-		.inspect(|t|{dbg!(t);})
 		.flatten()
 		.collect();
 	Ok(ui_state)

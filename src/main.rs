@@ -36,21 +36,21 @@ fn cache_dir() -> PathBuf
 	path
 }
 
-fn endpoints(path: &Path) -> io::Result<Vec<String>>
-{
-	let index_path = path.join("index_en.txt");
-	if !index_path.exists()
-	{
-		let index = live::index()?;
-		std::fs::write(&index_path, index)?;
-	}
-	let contents = std::fs::read_to_string(index_path)?;
-	let endpoints = contents
-		.lines()
-		.map(|e|e.to_owned())
-		.collect();
-	Ok(endpoints)
-}
+// fn endpoints(path: &Path) -> io::Result<Vec<String>>
+// {
+// 	let index_path = path.join("index_en.txt");
+// 	if !index_path.exists()
+// 	{
+// 		let index = live::index()?;
+// 		std::fs::write(&index_path, index)?;
+// 	}
+// 	let contents = std::fs::read_to_string(index_path)?;
+// 	let endpoints = contents
+// 		.lines()
+// 		.map(|e|e.to_owned())
+// 		.collect();
+// 	Ok(endpoints)
+// }
 
 fn main() -> anyhow::Result<()>
 {
@@ -60,13 +60,14 @@ fn main() -> anyhow::Result<()>
 		std::fs::create_dir(&cache_dir)?;
 	}
 	
-	let endpoints = endpoints(&cache_dir)?;
-	let mut db = setup::db(&cache_dir.join("db.sqlite")).unwrap();
-	setup::resources(&cache_dir, &endpoints, &mut db)?;
-	setup::warframes(&cache_dir, &endpoints, &mut db)?;
-	setup::weapons(&cache_dir, &endpoints, &mut db)?;
-	setup::relics(&cache_dir, &endpoints, &mut db)?;
-	setup::recipes(&cache_dir, &endpoints, &mut db)?;
+	// let endpoints = endpoints(&cache_dir)?;
+	// let mut db = setup::db(&cache_dir.join("db.sqlite")).unwrap();
+	// setup::resources(&cache_dir, &endpoints, &mut db)?;
+	// setup::warframes(&cache_dir, &endpoints, &mut db)?;
+	// setup::weapons(&cache_dir, &endpoints, &mut db)?;
+	// setup::relics(&cache_dir, &endpoints, &mut db)?;
+	// setup::recipes(&cache_dir, &endpoints, &mut db)?;
+	let mut db = db::open(&cache_dir.join("db.sqlite"), false)?;
 
 	let ui_state = persistance::load(&cache_dir.join("tracked.json"), &mut db)?;
 

@@ -6,17 +6,7 @@ use lzma_rs::lzma_decompress;
 const EXPORT: &str = "https://content.warframe.com/PublicExport";
 const MANIFEST_TEMPLATE: &str = "https://content.warframe.com/PublicExport/Manifest";
 const WORLDSTATE: &str = "https://content.warframe.com/dynamic/worldState.php";
-
-// fn main() -> std::io::Result<()>{
-
-// 	for endpoint in load_endpoints()?
-// 	{
-// 		let manifest_url = format!("{}/{}", ENDPOINT_TEMPLATE, endpoint);
-// 		let manifest = load_manifest(&manifest_url)?;
-// 		std::fs::write(format!("/home/brian/primes/src/{}", endpoint), &manifest)?;
-// 	}
-// 	Ok(())
-// }
+const DROPTABLE: &str = "https://www.warframe.com/droptables";
 
 pub fn load_manifest(name: &str) -> io::Result<String>
 {
@@ -29,7 +19,7 @@ pub fn load_manifest(name: &str) -> io::Result<String>
 		.map(|r|r.replace(&['\r', '\n'][..], ""))
 }
 
-pub fn index() -> io::Result<String>
+pub fn index() -> io::Result<Vec<String>>
 {
 	let index_url = format!("{}/{}", EXPORT, "index_en.txt.lzma");
 	let response = ureq::get(&index_url)
@@ -39,13 +29,23 @@ pub fn index() -> io::Result<String>
 	lzma_decompress(
 		&mut io::BufReader::new(response.into_reader()),
 		&mut decompressed).unwrap();
-	String::from_utf8(decompressed)
-		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))
+	let i = String::from_utf8(decompressed)
+		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+
+	Ok(i.lines().map(|l|l.to_string()).collect())
 }
 
 pub fn worldstate() -> io::Result<String>
 {
 	let response = ureq::get(WORLDSTATE)
+		.call()
+		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+	response.into_string()
+}
+
+pub fn droptable() -> io::Result<String>
+{
+	let response = ureq::get(DROPTABLE)
 		.call()
 		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
 	response.into_string()

@@ -4,11 +4,18 @@ use std::path::Path;
 
 use scraper::{Html, Selector};
 
+use crate::live;
+
 const DROPTABLE: &str = "https://www.warframe.com/droptables";
 // const RELIC_NAMES: [&str;4] = ["Lith", "Meso", "Neo", "Axi"];
 
 pub fn active_relics(file_path: &Path) -> io::Result<HashSet<String>>
 {
+	if !file_path.exists()
+	{
+		let table = live::droptable()?;
+		std::fs::write(file_path, &table).unwrap();
+	}
 	let contents = std::fs::read_to_string(&file_path)?;
 	let parsed = Html::parse_document(&contents);
 	let table_selector = Selector::parse(r#"#missionRewards~table"#).unwrap();

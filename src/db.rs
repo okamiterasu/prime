@@ -1,14 +1,91 @@
 use std::collections::HashSet;
+use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 
-use crate::relics;
+use crate::{relics, live, setup};
 
 enum Ternary
 {
 	True,
 	False,
 	Whatever
+}
+
+pub fn open(path: &Path, force_refresh: bool) -> rusqlite::Result<Connection>
+{
+	if !path.exists() || force_refresh {
+		init(path)
+	} else {
+		Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+	}
+}
+
+fn init(path: &Path) -> rusqlite::Result<Connection>
+{
+	// Try to delete file, but don't make a fuss if it fails
+	std::fs::remove_file(path).unwrap_or(());
+	let mut db = Connection::open(path)?;
+	let t = db.transaction()?;
+
+	// Create Tables
+	t.execute(r#"CREATE TABLE IF NOT EXISTS WARFRAME
+	(
+		name		TEXT PRIMARY KEY,
+		unique_name	TEXT NOT NULL
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS WEAPON
+	(
+		name		TEXT PRIMARY KEY,
+		unique_name	TEXT NOT NULL
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS RECIPE
+	(
+		unique_name	TEXT PRIMARY KEY,
+		result_type TEXT NOT NULL
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS REQUIRES
+	(
+		recipe_unique_name TEXT NOT NULL,
+		item_type	TEXT NOT NULL,
+		item_count	INT NOT NULL,
+		CONSTRAINT PK PRIMARY KEY (recipe_unique_name, item_type)
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS RELIC
+	(
+		unique_name TEXT PRIMARY KEY,
+		name		TEXT NOT NULL,
+		active		BOOLEAN DEFAULT FALSE,
+		resurgence	BOOLEAN DEFAULT FALSE
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS RELIC_REWARD
+	(
+		relic 	TEXT NOT NULL,
+		name	TEXT NOT NULL,
+		rarity	INT NOT NULL,
+		CONSTRAINT PK PRIMARY KEY (relic, name)
+	)"#, [])?;
+	t.execute(r#"CREATE TABLE IF NOT EXISTS RESOURCE
+	(
+		unique_name TEXT PRIMARY KEY,
+		name		TEXT NOT NULL
+	)"#, [])?;
+	// Populate Tables
+	for manifest in live::index().unwrap()
+	{
+		let m = live::load_manifest(&manifest).unwrap();
+		let ms = manifest.split("!00_").next().unwrap();
+		std::fs::write(path.parent().unwrap().join(ms), &m).unwrap();
+	}
+	setup::weapons(&t, &path.parent().unwrap().join("ExportWeapons_en.json"))?;
+	setup::warframes(&t, &path.parent().unwrap().join("ExportWarframes_en.json"))?;
+	setup::recipes(&t, &path.parent().unwrap().join("ExportRecipes_en.json"))?;
+	setup::resources(&t, &path.parent().unwrap().join("ExportResources_en.json"))?;
+	setup::relics(&t, &path.parent().unwrap().join("ExportRelicArcane_en.json"))?;
+	t.commit()?;
+
+
+	Ok(db)
 }
 
 pub fn requirements(db: &Connection, recipe_unique_name: &str) -> rusqlite::Result<Vec<(Option<String>, String, u32)>>
