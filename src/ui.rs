@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use druid::widget::{Button, Flex, Label, List, Scroll, TextBox};
 use druid::{Widget, WidgetExt, Data, Lens, Env, Color, Key, AppDelegate, Selector, lens, LensExt};
@@ -20,15 +21,32 @@ const TEXT_COLOR: Key<Color> = Key::new("color");
 // 	deserializer.deserialize_seq();
 // }
 
-#[derive(Clone, Data, Lens, Default)]
+#[derive(Clone, Data, Lens)]
 pub struct State
 {
-	pub tracked_recipes: Vector<Tracked>,
 	#[data(ignore)]
-	pub db_path: PathBuf,
+	pub db: Arc<Connection>,
 	#[data(ignore)]
 	pub tracked_path: PathBuf,
+	pub tracked_recipes: Vector<Tracked>,
 	text: String
+}
+
+impl State
+{
+	pub fn new(
+		db: Connection,
+		tracked_recipes: Vector<Tracked>,
+		tracked_path: impl Into<PathBuf>) -> Self
+	{
+		Self
+		{
+			db: Arc::new(db),
+			tracked_recipes,
+			tracked_path: tracked_path.into(),
+			text: Default::default()
+		}
+	}
 }
 
 #[derive(Eq, PartialEq, Clone, Data, Lens, Default, Debug)]
@@ -119,7 +137,7 @@ pub fn builder() -> impl Widget<State>
 		.with_child(Button::new("Add")
 			.on_click(|_, state: &mut State, _|{
 				let common_name = state.text.to_ascii_uppercase();
-				let db = rusqlite::Connection::open(&state.db_path).unwrap();
+				let db = state.db.as_ref();
 				let tracked = Tracked::new(&db, common_name.clone()).unwrap();
 				state.tracked_recipes.push_back(tracked);}));
 	header.add_child(add);

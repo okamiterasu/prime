@@ -5,6 +5,7 @@ use rusqlite::{Connection, OpenFlags};
 
 use crate::{relics, live, setup};
 
+#[allow(dead_code)]
 enum Ternary
 {
 	True,

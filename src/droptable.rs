@@ -6,9 +6,6 @@ use scraper::{Html, Selector};
 
 use crate::live;
 
-const DROPTABLE: &str = "https://www.warframe.com/droptables";
-// const RELIC_NAMES: [&str;4] = ["Lith", "Meso", "Neo", "Axi"];
-
 pub fn active_relics(file_path: &Path) -> io::Result<HashSet<String>>
 {
 	if !file_path.exists()

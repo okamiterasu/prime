@@ -33,7 +33,7 @@ impl From<ui::Tracked> for Tracked
 
 impl Tracked
 {
-	pub fn into_ui(mut self, db: &mut Connection) -> rusqlite::Result<ui::Tracked>
+	pub fn into_ui(mut self, db: &Connection) -> rusqlite::Result<ui::Tracked>
 	{
 		let common_name = db::common_name(db, &self.unique_name)?;
 		// let recipe_unique_name = db::recipe(db, &self.unique_name)?;
@@ -84,7 +84,7 @@ impl From<ui::Component> for Component
 
 impl Component
 {
-	pub fn into_ui(self, parent_common_name: Option<&String>, parent_recipe_unique_name: &str, db: &mut Connection, main_bp: bool) -> rusqlite::Result<ui::Component>
+	pub fn into_ui(self, parent_common_name: Option<&String>, parent_recipe_unique_name: &str, db: &Connection, main_bp: bool) -> rusqlite::Result<ui::Component>
 	{
 		let mut com = ui::Component::new(
 			db,
@@ -97,22 +97,15 @@ impl Component
 	}
 }
 
-pub fn load(tracked_path: &Path, db: &mut Connection) -> io::Result<ui::State>
+pub fn load(tracked_path: &Path, db: Connection) -> io::Result<ui::State>
 {
-	let mut ui_state = ui::State::default();
-	ui_state.db_path = db.path().expect("Empty DB Path").to_owned();
-	ui_state.tracked_path = tracked_path.to_owned();
-	if !tracked_path.exists()
-	{
-		return Ok(ui_state)
-	}
-
 	let contents = std::fs::read_to_string(tracked_path)?;
 	let parsed: Vec<Tracked> = serde_json::from_str(&contents)?;
-	ui_state.tracked_recipes = parsed.into_iter()
-		.map(|t|t.into_ui(db))
+	let tracked_recipes: Vector<_> = parsed.into_iter()
+		.map(|t|t.into_ui(&db))
 		.flatten()
 		.collect();
+	let ui_state = ui::State::new(db, tracked_recipes, tracked_path);
 	Ok(ui_state)
 }
 

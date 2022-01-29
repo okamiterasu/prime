@@ -1,5 +1,4 @@
-use std::io;
-use std::path::{PathBuf, Path};
+use std::path::{PathBuf};
 
 use druid::{AppLauncher, WindowDesc};
 
@@ -59,17 +58,9 @@ fn main() -> anyhow::Result<()>
 	{
 		std::fs::create_dir(&cache_dir)?;
 	}
-	
-	// let endpoints = endpoints(&cache_dir)?;
-	// let mut db = setup::db(&cache_dir.join("db.sqlite")).unwrap();
-	// setup::resources(&cache_dir, &endpoints, &mut db)?;
-	// setup::warframes(&cache_dir, &endpoints, &mut db)?;
-	// setup::weapons(&cache_dir, &endpoints, &mut db)?;
-	// setup::relics(&cache_dir, &endpoints, &mut db)?;
-	// setup::recipes(&cache_dir, &endpoints, &mut db)?;
-	let mut db = db::open(&cache_dir.join("db.sqlite"), false)?;
+	let  db = db::open(&cache_dir.join("db.sqlite"), false)?;
 
-	let ui_state = persistance::load(&cache_dir.join("tracked.json"), &mut db)?;
+	let ui_state = persistance::load(&cache_dir.join("tracked.json"), db)?;
 
 	let window = WindowDesc::new(ui::builder)
 		.title("Prime Tracker")
