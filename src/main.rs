@@ -1,8 +1,6 @@
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 use druid::{AppLauncher, WindowDesc};
-
-// use anyhow::Result;
 
 mod live;
 mod recipes;
@@ -35,22 +33,6 @@ fn cache_dir() -> PathBuf
 	path
 }
 
-// fn endpoints(path: &Path) -> io::Result<Vec<String>>
-// {
-// 	let index_path = path.join("index_en.txt");
-// 	if !index_path.exists()
-// 	{
-// 		let index = live::index()?;
-// 		std::fs::write(&index_path, index)?;
-// 	}
-// 	let contents = std::fs::read_to_string(index_path)?;
-// 	let endpoints = contents
-// 		.lines()
-// 		.map(|e|e.to_owned())
-// 		.collect();
-// 	Ok(endpoints)
-// }
-
 fn main() -> anyhow::Result<()>
 {
 	let cache_dir = cache_dir();
@@ -58,7 +40,7 @@ fn main() -> anyhow::Result<()>
 	{
 		std::fs::create_dir(&cache_dir)?;
 	}
-	let  db = db::open(&cache_dir.join("db.sqlite"), false)?;
+	let  db = db::open(&cache_dir, "db.sqlite", false)?;
 
 	let ui_state = persistance::load(&cache_dir.join("tracked.json"), db)?;
 

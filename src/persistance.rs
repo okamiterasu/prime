@@ -36,7 +36,6 @@ impl Tracked
 	pub fn into_ui(mut self, db: &Connection) -> rusqlite::Result<ui::Tracked>
 	{
 		let common_name = db::common_name(db, &self.unique_name)?;
-		// let recipe_unique_name = db::recipe(db, &self.unique_name)?;
 		let requires = std::mem::take(&mut self.components)
 			.into_iter()
 			.map(|c|{

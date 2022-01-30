@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use druid::widget::{Button, Flex, Label, List, Scroll, TextBox};
 use druid::{Widget, WidgetExt, Data, Lens, Env, Color, Key, AppDelegate, Selector, lens, LensExt};
-use druid::im::{Vector};
+use druid::im::Vector;
 use rusqlite::Connection;
 
 use super::{relics, db};
@@ -13,13 +13,6 @@ const SILVER: Color = Color::rgb8(0xC0, 0xC0, 0xC0);
 const GOLD: Color = Color::rgb8(0xFF, 0xD7, 0x00);
 
 const TEXT_COLOR: Key<Color> = Key::new("color");
-
-// fn des_vector<'de, D, O>(deserializer: D) -> Result<Vector<O>, D::Error>
-// where
-// 	D: Deserializer<'de>
-// {
-// 	deserializer.deserialize_seq();
-// }
 
 #[derive(Clone, Data, Lens)]
 pub struct State
