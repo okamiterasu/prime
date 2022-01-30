@@ -13,20 +13,22 @@ enum Ternary
 	Whatever
 }
 
-pub fn open(path: &Path, force_refresh: bool) -> rusqlite::Result<Connection>
+pub fn open(cache_dir: &Path, db_filename: impl AsRef<Path>, force_refresh: bool) -> rusqlite::Result<Connection>
 {
-	if !path.exists() || force_refresh {
-		init(path)
+	let db_path = cache_dir.join(&db_filename);
+	if !db_path.exists() || force_refresh {
+		init(cache_dir, db_filename)
 	} else {
-		Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+		Connection::open_with_flags(db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
 	}
 }
 
-fn init(path: &Path) -> rusqlite::Result<Connection>
+fn init(cache_dir: &Path, db_filename: impl AsRef<Path>) -> rusqlite::Result<Connection>
 {
+	let db_path = cache_dir.join(db_filename);
 	// Try to delete file, but don't make a fuss if it fails
-	std::fs::remove_file(path).unwrap_or(());
-	let mut db = Connection::open(path)?;
+	let _ = std::fs::remove_file(&db_path);
+	let mut db = Connection::open(db_path)?;
 	let t = db.transaction()?;
 
 	// Create Tables
@@ -76,13 +78,13 @@ fn init(path: &Path) -> rusqlite::Result<Connection>
 	{
 		let m = live::load_manifest(&manifest).unwrap();
 		let ms = manifest.split("!00_").next().unwrap();
-		std::fs::write(path.parent().unwrap().join(ms), &m).unwrap();
+		std::fs::write(cache_dir.join(ms), &m).unwrap();
 	}
-	setup::weapons(&t, &path.parent().unwrap().join("ExportWeapons_en.json"))?;
-	setup::warframes(&t, &path.parent().unwrap().join("ExportWarframes_en.json"))?;
-	setup::recipes(&t, &path.parent().unwrap().join("ExportRecipes_en.json"))?;
-	setup::resources(&t, &path.parent().unwrap().join("ExportResources_en.json"))?;
-	setup::relics(&t, &path.parent().unwrap().join("ExportRelicArcane_en.json"))?;
+	setup::weapons(&t, &cache_dir.join("ExportWeapons_en.json"))?;
+	setup::warframes(&t, &cache_dir.join("ExportWarframes_en.json"))?;
+	setup::recipes(&t, &cache_dir.join("ExportRecipes_en.json"))?;
+	setup::resources(&t, &cache_dir.join("ExportResources_en.json"))?;
+	setup::relics(&t, &cache_dir.join("ExportRelicArcane_en.json"))?;
 	t.commit()?;
 
 

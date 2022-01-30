@@ -62,8 +62,9 @@ pub fn weapons(db: &Connection, file_path: &Path) -> rusqlite::Result<()>
 
 pub fn relics(db: &Connection, file_path: &Path) -> rusqlite::Result<()>
 {
-	let active_relics = droptable::active_relics(&file_path.parent().unwrap().join("drops.html")).unwrap();
-	let resurgence_relics = worldstate::resurgence_relics(&file_path.parent().unwrap().join("worldstate.json")).unwrap();
+	let parent = file_path.parent().unwrap();
+	let active_relics = droptable::active_relics(&parent.join("drops.html")).unwrap();
+	let resurgence_relics = worldstate::resurgence_relics(&parent.join("worldstate.json")).unwrap();
 	for relic in super::relics::parse_from_file(&file_path).unwrap()
 	{
 		let active = active_relics.contains(&relic.name);
