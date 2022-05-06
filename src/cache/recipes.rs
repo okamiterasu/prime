@@ -1,6 +1,8 @@
-use std::path::{Path};
+use std::path::Path;
 
-use serde::{Deserialize};
+use anyhow::Result;
+use serde::Deserialize;
+use super::load;
 
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
@@ -26,13 +28,9 @@ pub struct Ingredient
 	pub item_count: u32,
 }
 
-pub fn parse_from_file(path: &Path) -> std::io::Result<Vec<Recipe>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Recipe>>
 {
-	let file_contents = std::fs::read_to_string(path)?;
-	let escaped = file_contents
-		.replace(r"\r", "")
-		.replace(&['\r', '\n'][..], "");
-	let parsed: Export = serde_json::from_str(&escaped)?;
-	let recipes = parsed.export_recipes;
-	Ok(recipes)
+	let file = load::load(cache, manifest)?;
+	let parsed: Export = serde_json::from_str(&file)?;
+	Ok(parsed.export_recipes)
 }

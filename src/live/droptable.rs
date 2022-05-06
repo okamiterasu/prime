@@ -1,17 +1,24 @@
-use std::io;
-use std::collections::HashSet;
 use std::path::Path;
 
+use anyhow::Result;
 use scraper::{Html, Selector};
 
-use crate::live;
+const DROPTABLE: &str = "https://www.warframe.com/droptables";
 
-pub fn active_relics(file_path: &Path) -> io::Result<HashSet<String>>
+fn droptable() -> Result<String>
+{
+	ureq::get(DROPTABLE)
+		.call()?
+		.into_string()
+		.map_err(|e|e.into())
+}
+
+pub(crate) fn active_relics(file_path: &Path) -> Result<Vec<String>>
 {
 	if !file_path.exists()
 	{
-		let table = live::droptable()?;
-		std::fs::write(file_path, &table).unwrap();
+		let table = droptable()?;
+		std::fs::write(file_path, &table)?;
 	}
 	let contents = std::fs::read_to_string(&file_path)?;
 	let parsed = Html::parse_document(&contents);
@@ -28,7 +35,7 @@ pub fn active_relics(file_path: &Path) -> io::Result<HashSet<String>>
 			r.starts_with("Axi")
 		})
 		.map(|r|r.trim_end_matches(" (Radiant)"))
-		.map(|r|r.to_ascii_uppercase())
+		.map(|r|r.to_string())
 		.collect();
 	Ok(relics)
 }

@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize};
 
-use crate::live;
+const WORLDSTATE: &str = "https://content.warframe.com/dynamic/worldState.php";
 
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
@@ -30,12 +30,20 @@ pub struct Item
 	pub item_type: String,
 }
 
-pub fn resurgence_relics(file_path: &Path) -> std::io::Result<HashSet<String>>
+fn worldstate() -> io::Result<String>
+{
+	let response = ureq::get(WORLDSTATE)
+		.call()
+		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+	response.into_string()
+}
+
+pub fn resurgence_relics(file_path: &Path) -> anyhow::Result<HashSet<String>>
 {
 	if !file_path.exists()
 	{
-		let state = live::worldstate()?;
-		std::fs::write(file_path, &state).unwrap();
+		let state = worldstate()?;
+		std::fs::write(file_path, &state)?;
 	}
 
 	let reader = BufReader::new(File::open(file_path)?);

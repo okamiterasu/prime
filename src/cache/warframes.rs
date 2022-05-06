@@ -1,6 +1,6 @@
 use std::path::Path;
-
-use serde::{Deserialize};
+use serde::Deserialize;
+use super::load;
 
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
@@ -19,13 +19,9 @@ pub struct Warframe
     pub product_category: String
 }
 
-pub fn parse_from_file(path: &Path) -> std::io::Result<Vec<Warframe>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> anyhow::Result<Vec<Warframe>>
 {
-    let file_contents = std::fs::read_to_string(path)?;
-    let escaped: String = file_contents
-        .replace(r"\r", "")
-        .replace(&['\r', '\n'][..], "");
-    let parsed: Export = serde_json::from_str(&escaped)?;
-    let frames = parsed.export_warframes;
-    Ok(frames)
+	let file = load::load(cache, manifest)?;
+	let parsed: Export = serde_json::from_str(&file)?;
+	Ok(parsed.export_warframes)
 }

@@ -1,10 +1,10 @@
 use std::path::{Path};
-// use std::collections::HashMap;
 
-use druid::Data;
 use serde::{Deserialize};
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Data, Hash)]
+use super::load;
+
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Rarity
 {
 	COMMON,
@@ -83,16 +83,12 @@ pub struct Reward
 	pub rarity: Rarity,
 }
 
-pub fn parse_from_file(path: &Path) -> std::io::Result<Vec<Relic>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> anyhow::Result<Vec<Relic>>
 {
-	let file_contents = std::fs::read_to_string(path)?;
-	let escaped = file_contents
-		.replace(r"\r", "")
-		.replace(&['\r', '\n'][..], "");
-	let parsed: Export = serde_json::from_str(&escaped)?;
-	let relicarcanes = parsed.export_relic_arcane;
-	let relics = relicarcanes.into_iter()
-		.filter_map(|r|r.try_into().ok())
+	let file = load::load(cache, manifest)?;
+	let parsed: Export = serde_json::from_str(&file)?;
+	let relics = parsed.export_relic_arcane.into_iter()
+		.flat_map(|r|r.try_into())
 		.collect();
 	Ok(relics)
 }

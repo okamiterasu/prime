@@ -12,6 +12,6 @@ rusqlite = {version = "0.26", features=["bundled"]}
 lazy_static = "1.4"
 ureq = { version = "2.4", features = ["json"] }
 lzma-rs = "0.2"
-druid = {version = "0.7", features=["im"]}
 scraper = "0.12.0"
 anyhow = {version="1.0.52", features=["backtrace"]}
+eframe = "0.18.0"
