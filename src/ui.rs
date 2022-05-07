@@ -143,7 +143,7 @@ fn component_group(
 					.or_insert(0)
 		};
 
-		let color = if *owned>=1 {
+		let color = if *owned>=required {
 			egui::Color32::BLACK
 		} else {
 			ui.visuals().text_color()
