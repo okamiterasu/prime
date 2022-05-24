@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use anyhow::{Result, Error, anyhow};
+use anyhow::{Result, Error, anyhow, bail};
 use db::Database;
 use eframe::egui;
 
@@ -127,10 +127,9 @@ impl Component
 		let count = db.how_many_needed(recipe_unique_name, &unique_name)?;
 		let active_relics = db.active_component_relics(&unique_name)?;
 		let resurgence_relics = Default::default();
-		let recipe = db
-			.recipe(&unique_name)
-			.map(|r|Recipe::new(db, r).unwrap())
-			.ok();
+		let recipe = db.recipe(&unique_name)?
+			.map(|r|Recipe::new(db, r))
+			.transpose()?;
 		Ok(Self{unique_name, common_name, count, active_relics, resurgence_relics, recipe})
 	}
 }
@@ -140,8 +139,9 @@ pub(crate) struct Tracked
 {
 	pub(crate) common_name: Option<String>,
 	pub(crate) unique_name: String,
-	pub(crate) recipe: Recipe,
-	pub(crate) components: Vec<Component>
+	pub(crate) recipes: Vec<(Recipe, Vec<Component>)>,
+	// pub(crate) recipe: Recipe,
+	// pub(crate) components: Vec<Component>
 }
 
 impl Tracked
@@ -149,16 +149,23 @@ impl Tracked
 	fn new(db: &mut Database, unique_name: String) -> Result<Self>
 	{
 		let common_name = db.item_common_name(&unique_name)?;
-		let recipe_unique_name = db.recipe(&unique_name)?;
-		let recipe = Recipe::with_common_name(
-			db,
-			recipe_unique_name.clone(),
-			common_name.as_ref().map(|c|format!("{} Blueprint", c)))?;
-		let components = db.requirements(&recipe_unique_name)?
-			.into_iter()
-			.map(|c|Component::new(db, c.0, &recipe.unique_name).unwrap())
-			.collect();
-		Ok(Self{common_name, unique_name, recipe, components})
+		let recipe_unique_names = db.recipes(&unique_name)?;
+		if recipe_unique_names.len() == 0
+		{
+			bail!("Recipe not found for {}", unique_name)
+		}
+		let mut recipes = vec![];
+		for r in recipe_unique_names
+		{
+			let cn = common_name.as_ref().map(|c|format!("{} Blueprint", c));
+			let recipe = Recipe::with_common_name(db, r.clone(), cn)?;
+			let components = db.requirements(&r)?
+				.into_iter()
+				.flat_map(|c|Component::new(db, c.0, &recipe.unique_name))
+				.collect();
+			recipes.push((recipe, components));
+		}
+		Ok(Self{common_name, unique_name, recipes})
 	}
 }
 

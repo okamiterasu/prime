@@ -18,7 +18,7 @@ pub(crate) fn load(tracked_path: &Path, db: &mut db::Database) -> Result<(Vec<cr
 	let contents = std::fs::read_to_string(tracked_path).unwrap_or_default();
 	let parsed: Saved = serde_json::from_str(&contents).unwrap_or_default();
 	let t = parsed.tracked.into_iter()
-		.map(|t|crate::Tracked::new(db, t).unwrap())
+		.flat_map(|t|crate::Tracked::new(db, t))
 		.collect();
 	Ok((t, parsed.owned))
 }

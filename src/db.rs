@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rusqlite::{Connection, Statement, params, OptionalExtension};
-use anyhow::Result;
+use anyhow::{Result, Context};
 
 use crate::{live, cache};
 
@@ -103,7 +103,7 @@ SELECT REQUIRES.item_count
 		REQUIRES.item_type = ?2"#;
 
 const ACTIVE_COMPONENT_RELICS: &str = r#"
-SELECT RELIC.name, RELIC_REWARD.rarity
+SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
 	FROM RELIC_REWARD
 		INNER JOIN RELIC
 			ON RELIC_REWARD.relic = RELIC.unique_name
@@ -113,7 +113,7 @@ SELECT RELIC.name, RELIC_REWARD.rarity
 		RELIC_REWARD.name = ?1"#;
 
 const ACTIVE_RECIPE_RELICS: &str = r#"
-SELECT RELIC.name, RELIC_REWARD.rarity
+SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
 	FROM RECIPE
 		INNER JOIN RELIC_REWARD
 			ON RECIPE.unique_name = RELIC_REWARD.name
@@ -229,7 +229,14 @@ impl Database
 				rel.execute([unique_name, name])?;
 				for reward in relic.relic_rewards
 				{
-					rew.execute(params![unique_name, reward.reward_name, reward.rarity.as_str()])?;
+					let reward_name = reward.reward_name
+						.split('/')
+						.filter(|s|*s != "StoreItems")
+						.fold(String::new(), |a, b|a+b+"/");
+					let reward_name = reward_name
+						.strip_suffix('/')
+						.unwrap_or(&reward_name);
+					rew.execute(params![unique_name, reward_name, reward.rarity.as_str()])?;
 				}
 			}
 			let mut acr = t.prepare("INSERT OR IGNORE INTO ACTIVE_RELIC(unique_name) VALUES (?1)")?;
@@ -289,7 +296,7 @@ impl Database
 	{
 		self._resource_unique_name
 			.query_row([common_name], |r|r.get(0))
-			.map_err(|e|e.into())
+			.with_context(||format!("Unique name of resource '{}' not found", common_name))
 	}
 
 	pub fn how_many_needed(&mut self, recipe_unique_name: &str, resource_unique_name: &str) -> rusqlite::Result<u32>
@@ -328,9 +335,20 @@ impl Database
 		Ok(response)
 	}
 
-	pub fn recipe(&mut self, result_unique_name: &str) -> Result<String>
+	pub fn recipe(&mut self, result_unique_name: &str) -> Result<Option<String>>
 	{
-		self.recipe.query_row([result_unique_name],|r|r.get(0))
+		self.recipe
+			.query_row([result_unique_name],|r|r.get(0))
+			.optional()
 			.map_err(|e|e.into())
+	}
+
+	pub fn recipes(&mut self, result_unique_name: &str) -> Result<Vec<String>>
+	{
+		let res = self.recipe
+			.query_map([result_unique_name], |r|r.get(0))?
+			.flatten()
+			.collect();
+		Ok(res)
 	}
 }

@@ -19,15 +19,12 @@ pub(crate) fn load_manifest(name: &str) -> Result<String>
 pub fn index() -> Result<HashMap<String, String>>
 {
 	let index_url = format!("{}/{}", EXPORT, "index_en.txt.lzma");
-	let response = ureq::get(&index_url)
-		.call()
-		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+	let response = ureq::get(&index_url).call()?;
 	let mut decompressed = Vec::new();
 	lzma_decompress(
 		&mut io::BufReader::new(response.into_reader()),
-		&mut decompressed).unwrap();
-	let i = String::from_utf8(decompressed)
-		.map_err(|e|io::Error::new(io::ErrorKind::Other, e))?;
+		&mut decompressed)?;
+	let i = String::from_utf8(decompressed)?;
 	let index = i.lines()
 		.map(|l|(&l[0..l.len()-26], &l[..]))
 		.map(|(k, v)|(k.to_string(), v.to_string()))

@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::Rarity;
+use crate::Relic;
 use crate::db::Database;
 use crate::cache;
 use crate::Tracked;
 
 use eframe::egui;
 use egui::Ui;
+use egui::Color32;
 
 pub(crate) struct App
 {
@@ -53,46 +56,56 @@ impl eframe::App for App
 		ctx.set_visuals(egui::style::Visuals::dark());
 		egui::CentralPanel::default().show(ctx, |ui|
 		{
-			ui.heading("Recipe Tracker");
-			ui.horizontal(|ui|
-			{
-				ui.label("Add Item");
-				ui.text_edit_singleline(&mut self.add_search);
-				if ui.button("Add").clicked()
-				{
-					if let Ok(unique_name) = self.db.item_unique_name(&self.add_search)
-					{
-						let t = Tracked::new(&mut self.db, unique_name).unwrap();
-						self.tracked.push(t);
-					}
-					self.add_search.clear();
-					self.tracked.sort_by(|a, b|a.common_name.cmp(&b.common_name));
-				}
-			});
+			header(ui, &mut self.add_search, &mut self.db, &mut self.tracked);
 			egui::Grid::new("").show(ui, |ui|
 			{
-				if let Some(i)=self.to_remove.take(){self.tracked.remove(i);}
+				if let Some(i)=self.to_remove.take()
+				{
+					self.tracked.remove(i);
+				}
+
 				for (i, tracked) in self.tracked.iter().enumerate()
 				{
-					recipe_group(
-						ui,
-						tracked,
-						i,
-						&mut self.owned,
-						&mut self.to_remove);
-					if i%7==6{ui.end_row()}
+					item(ui, tracked, i, &mut self.owned, &mut self.to_remove);
+
+					if i%7 == 6
+					{
+						ui.end_row()
+					}
 				}
 			});
 		});
 	}
 }
 
-fn recipe_group(
+fn header(
 	ui: &mut Ui,
-	tracked: &Tracked,
-	i: usize,
-	owned_components: &mut HashMap<String, u32>,
-	to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
+	add_search: &mut String,
+	db: &mut Database,
+	tracked: &mut Vec<Tracked>) -> egui::InnerResponse<()>
+{
+	ui.heading("Recipe Tracker");
+	ui.horizontal(|ui|
+	{
+		ui.label("Add Item");
+		ui.text_edit_singleline(add_search);
+		if ui.button("Add").clicked()
+		{
+			if let Ok(unique_name) = db.item_unique_name(add_search)
+			{
+				if let Ok(t) = Tracked::new(db, unique_name)
+				{
+					tracked.push(t);
+				}
+				
+			}
+			add_search.clear();
+			tracked.sort_by(|a, b|a.common_name.cmp(&b.common_name));
+		}
+	})
+}
+
+fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap<String, u32>, to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
 {
 	let unique_name = &tracked.unique_name;
 	let common_name = tracked.common_name.as_deref();
@@ -100,29 +113,62 @@ fn recipe_group(
 	{
 		ui.vertical(|ui|
 		{
-			if ui.button("Del").clicked() {*to_remove = Some(i)}
-			ui.heading(common_name.unwrap_or(unique_name));
-			let recipe_unique_name = &tracked.recipe.unique_name;
-			let recipe_common_name = tracked.recipe.common_name.as_deref();
+			ui.horizontal(|ui|
+			{
+				if ui.button("Del").clicked() {*to_remove = Some(i)};
+				ui.heading(common_name.unwrap_or(unique_name));
+			});
+			ui.horizontal(|ui|
+			{
+				for (recipe, components) in &tracked.recipes
+				{
+					recipe_group(ui, recipe, components, owned_components, unique_name, common_name);
+				}
+			});
+		});
+	})
+}
+
+fn recipe_group(
+	ui: &mut Ui,
+	recipe: &crate::Recipe,
+	components: &[crate::Component],
+	owned_components: &mut HashMap<String, u32>,
+	unique_name: &str,
+	common_name: Option<&str>) -> egui::InnerResponse<()>
+{
+	ui.vertical(|ui|
+	{
+		let recipe_unique_name = &recipe.unique_name;
+		let recipe_common_name = recipe.common_name.as_deref();
+		component_group(
+			ui,
+			recipe_unique_name,
+			recipe_common_name,
+			owned_components,
+			1,
+			&recipe.active_relics,
+			&recipe.resurgence_relics);
+		for component in components
+		{
+			let component_unique_name = &component.unique_name;
+			let component_common_name = component.common_name.as_deref();
+			let required = component.count;
+			let active_relics = component.recipe.as_ref()
+				.map(|r|&r.active_relics)
+				.unwrap_or(&component.active_relics);
+			let resurgence_relics = component.recipe.as_ref()
+				.map(|r|&r.resurgence_relics)
+				.unwrap_or(&component.resurgence_relics);
 			component_group(
 				ui,
-				recipe_unique_name,
-				recipe_common_name,
+				component_unique_name,
+				component_common_name,
 				owned_components,
-				1);
-			for component in &tracked.components
-			{
-				let component_unique_name = &component.unique_name;
-				let component_common_name = component.common_name.as_deref();
-				let required = component.count;
-				component_group(
-					ui,
-					component_unique_name,
-					component_common_name,
-					owned_components,
-					required);
-			}
-		});
+				required,
+				&active_relics,
+				&resurgence_relics);
+		}
 	})
 }
 
@@ -131,36 +177,78 @@ fn component_group(
 	unique_name: &str,
 	common_name: Option<&str>,
 	owned_components: &mut HashMap<String, u32>,
-	required: u32) -> egui::InnerResponse<()>
+	required: u32,
+	active_relics: &[Relic],
+	resurgence_relics: &[Relic]) -> egui::InnerResponse<()>
 {
-	ui.horizontal(|ui|
+	let mut fullfilled = false;
+	ui.vertical(|ui|
 	{
-		let owned = match owned_components.get_mut(unique_name)
+		ui.horizontal(|ui|
 		{
-			Some(v)=>v,
-			None=>owned_components
-					.entry(unique_name.to_owned())
-					.or_insert(0)
-		};
+			let owned = match owned_components.get_mut(unique_name)
+			{
+				Some(v)=>v,
+				None=>owned_components
+						.entry(unique_name.to_owned())
+						.or_insert(0)
+			};
+			fullfilled = *owned>=required;
 
-		let color = if *owned>=required {
-			egui::Color32::BLACK
-		} else {
-			ui.visuals().text_color()
-		};
+			let color = if fullfilled {
+				Color32::BLACK
+			} else {
+				ui.visuals().text_color()
+			};
 
-		if ui.button("-").clicked()
+			if ui.button("-").clicked()
+			{
+				*owned = owned.saturating_sub(1);
+			}
+
+			if ui.button("+").clicked()
+			{
+				*owned += 1;
+			}
+
+			let name = common_name.unwrap_or(unique_name);
+			ui.colored_label(color, format!("{} of {}", owned, required));
+			ui.colored_label(color, name);
+			
+		});
+		if !active_relics.is_empty() && !fullfilled
 		{
-			*owned = owned.saturating_sub(1);
+			ui.label("Active Relics");
+			ui.vertical(|ui|
+			{
+				for relic in active_relics
+				{
+					let color = match relic.rarity {
+						Rarity::COMMON=>Color32::BROWN,
+						Rarity::UNCOMMON=>Color32::GRAY,
+						Rarity::RARE=>Color32::GOLD
+					};
+		
+					ui.colored_label(color, &relic.name);
+				}
+			});
 		}
-
-		if ui.button("+").clicked()
+		if !resurgence_relics.is_empty() && !fullfilled
 		{
-			*owned += 1;
+			ui.label("Resurgence Relics");
+			ui.vertical(|ui|
+			{
+				for relic in resurgence_relics
+				{
+					let color = match relic.rarity {
+						Rarity::COMMON=>Color32::BROWN,
+						Rarity::UNCOMMON=>Color32::GRAY,
+						Rarity::RARE=>Color32::GOLD
+					};
+		
+					ui.colored_label(color, &relic.name);
+				}
+			});
 		}
-
-		let name = common_name.unwrap_or(unique_name);
-		ui.colored_label(color, format!("{} of {}", owned, required));
-		ui.colored_label(color, name);
 	})
 }
