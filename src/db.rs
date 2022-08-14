@@ -122,7 +122,7 @@ SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
 		INNER JOIN ACTIVE_RELIC
 			ON RELIC.name = ACTIVE_RELIC.unique_name
 	WHERE
-		RECIPE.result_type = ?1"#;
+		RECIPE.unique_name = ?1"#;
 
 const RECIPE: &str = r#"
 SELECT unique_name
