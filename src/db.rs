@@ -3,7 +3,7 @@ use std::path::Path;
 use rusqlite::{Connection, Statement, params, OptionalExtension};
 use anyhow::{Result, Context};
 
-use crate::{live, cache};
+use crate::cache;
 
 const SCHEMA: &str = r#"
 BEGIN TRANSACTION;
@@ -184,7 +184,7 @@ impl Database
 	pub(crate) fn populate(conn: &mut Connection, cache_dir: &Path) -> Result<()>
 	{
 		
-		let index = live::index()?;
+		let index = cache::load_index(&cache_dir.join("index_en.txt"))?;
 		let t = conn.transaction()?;
 		{
 			let mut item = t.prepare("INSERT OR IGNORE INTO ITEM(unique_name, name) VALUES (?1, ?2)")?;
@@ -240,7 +240,7 @@ impl Database
 				}
 			}
 			let mut acr = t.prepare("INSERT OR IGNORE INTO ACTIVE_RELIC(unique_name) VALUES (?1)")?;
-			for active_relic in live::active_relics(&cache_dir.join("droptable.html"))?
+			for active_relic in cache::active_relics(&cache_dir.join("droptable.html"))?
 			{
 				acr.execute([active_relic])?;
 			}
