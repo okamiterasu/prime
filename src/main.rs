@@ -172,6 +172,7 @@ impl Tracked
 fn main() -> Result<()>
 {
 	let cache_dir = cache_dir()?;
+	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
 	{
 		std::fs::create_dir(&cache_dir)?;
 	}
