@@ -53,17 +53,13 @@ impl eframe::App for App
 
 	fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
 	{
+		if let Some(i)=self.to_remove.take(){self.tracked.remove(i);}
 		ctx.set_visuals(egui::style::Visuals::dark());
 		egui::CentralPanel::default().show(ctx, |ui|
 		{
 			header(ui, &mut self.add_search, &mut self.db, &mut self.tracked);
 			egui::Grid::new("").show(ui, |ui|
 			{
-				if let Some(i)=self.to_remove.take()
-				{
-					self.tracked.remove(i);
-				}
-
 				for (i, tracked) in self.tracked.iter().enumerate()
 				{
 					item(ui, tracked, i, &mut self.owned, &mut self.to_remove);
@@ -73,7 +69,7 @@ impl eframe::App for App
 						ui.end_row()
 					}
 				}
-			});
+			})
 		});
 	}
 }
