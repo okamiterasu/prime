@@ -214,7 +214,6 @@ fn component_group(
 		});
 		if !active_relics.is_empty() && !fullfilled
 		{
-			ui.label("Active Relics");
 			ui.vertical(|ui|
 			{
 				for relic in active_relics
