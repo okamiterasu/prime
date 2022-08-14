@@ -118,7 +118,7 @@ fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap
 			{
 				for (recipe, components) in &tracked.recipes
 				{
-					recipe_group(ui, recipe, components, owned_components, unique_name, common_name);
+					recipe_group(ui, recipe, components, owned_components);
 				}
 			});
 		});
@@ -129,13 +129,11 @@ fn recipe_group(
 	ui: &mut Ui,
 	recipe: &crate::Recipe,
 	components: &[crate::Component],
-	owned_components: &mut HashMap<String, u32>,
-	unique_name: &str,
-	common_name: Option<&str>) -> egui::InnerResponse<()>
+	owned_components: &mut HashMap<String, u32>) -> egui::InnerResponse<()>
 {
 	ui.vertical(|ui|
 	{
-		let recipe_unique_name = &recipe.unique_name;
+		let recipe_unique_name = recipe.unique_name.as_str();
 		let recipe_common_name = recipe.common_name.as_deref();
 		component_group(
 			ui,
