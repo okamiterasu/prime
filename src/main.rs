@@ -1,5 +1,5 @@
-use std::path::PathBuf;
-use anyhow::{Result, Error, anyhow, bail};
+use std::{path::{PathBuf, Path}, collections::HashMap};
+use anyhow::{Result, Error, anyhow, bail, Context};
 use db::Database;
 use eframe::egui;
 
@@ -173,9 +173,24 @@ fn main() -> Result<()>
 {
 	let cache_dir = cache_dir()?;
 	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
+
+	if let Some((index, index_raw)) = check_for_manifest_updates(&cache_dir)
+		.context("Could not check for manifest updates")?
 	{
-		std::fs::create_dir(&cache_dir)?;
+		std::fs::write(cache_dir.join("index_en.txt"), &index_raw)?;
+		update_manifests(&cache_dir, &index)
+			.context("Could not update manifests")?;
+		remove_old_manifests(&cache_dir, &index)
+			.context("Could not remove old manifests")?;
+		// Worldstate has probably changed too, so update that as well.
+		let ws = live::droptable()
+			.context("Failed to scrape droptable")?;
+		std::fs::write(cache_dir.join("droptable.html"), &ws)?;
+		// database is old, so delete and rebuild later.
+		// TODO: clear instead of full delete. Probably faster.
+		std::fs::remove_file(&cache_dir.join("db.sqlite"))?;
 	}
+
 	let mut db = match db::Database::open(&cache_dir, "db.sqlite")
 	{
 		Ok(db)=>db,
@@ -192,3 +207,47 @@ fn main() -> Result<()>
 		Box::new(|_cc| Box::new(ui::App::with_state(db, tracked, owned, cache_dir))));
 }
 
+// Downloads the index from live and compares it to the local version.
+// If they are not the same, returns both raw and parsed live version.
+fn check_for_manifest_updates(dir: &Path) -> Result<Option<(HashMap<String, String>, String)>>
+{
+	let (live_index, live_index_raw) = live::index()
+		.context("Could not load live index")?;
+	let local_index_path = dir.join("index_en.txt");
+	let local_index = cache::load_index(&local_index_path)
+		.unwrap_or_default();
+	let is_different = live_index != local_index;
+	Ok(is_different.then_some((live_index, live_index_raw)))
+}
+
+fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
+{
+	for manifest in index.values()
+	{
+		let path = dir.join(manifest);
+		if !path.exists()
+		{
+			let m = live::load_manifest(manifest)
+				.with_context(||format!("Could not load manifest: {manifest}"))?;
+			std::fs::write(&path, m)?;
+		}
+	}
+	Ok(())
+}
+
+fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
+{
+	for file in std::fs::read_dir(&dir)?
+	{
+		let file = file?;
+		let file_name = file.file_name();
+		let file_name = file_name.to_str()
+			.ok_or(anyhow!("Non-utf8 string"))?;
+		if !file_name.starts_with("Export") {continue}
+		if file_name != index[&file_name[0..file_name.len()-26]]
+		{
+			dbg!(file_name);
+		}
+	}
+	Ok(())
+}
