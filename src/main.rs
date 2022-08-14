@@ -9,21 +9,21 @@ mod db;
 mod cache;
 
 #[cfg(target_os = "windows")]
-fn cache_dir() -> PathBuf
+fn cache_dir() -> Result<PathBuf>
 {
-	let home = std::env::var("UserProfile").expect("HOME env not set");
+	let home = std::env::var("UserProfile")?;
 	let mut path = PathBuf::from(home);
 	path.push("primes/");
-	path
+	Ok(path)
 }
 
 #[cfg(target_os = "linux")]
 fn cache_dir() -> PathBuf
 {
-	let home = std::env::var("HOME").expect("HOME env not set");
+	let home = std::env::var("HOME")?;
 	let mut path = PathBuf::from(home);
 	path.push(".cache/primes/");
-	path
+	Ok(path)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -171,8 +171,7 @@ impl Tracked
 
 fn main() -> Result<()>
 {
-	let cache_dir = cache_dir();
-	if !cache_dir.exists()
+	let cache_dir = cache_dir()?;
 	{
 		std::fs::create_dir(&cache_dir)?;
 	}
