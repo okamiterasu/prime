@@ -96,15 +96,15 @@ impl Recipe
 	{
 		let common_name = db.resource_common_name(&unique_name)?;
 		let active_relics = db.active_recipe_relics(&unique_name)?;
-		let resurgence_relics = Default::default();
-		Ok(Self{common_name, unique_name: unique_name, active_relics, resurgence_relics})
+		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)?;
+		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
 	}
 
 	fn with_common_name(db: &mut Database, unique_name: String, common_name: Option<String>) -> Result<Self>
 	{
 		let active_relics = db.active_recipe_relics(&unique_name)?;
-		let resurgence_relics = Default::default();
-		Ok(Self{common_name, unique_name: unique_name, active_relics, resurgence_relics})
+		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)?;
+		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
 	}
 }
 
@@ -126,7 +126,7 @@ impl Component
 		let common_name = db.resource_common_name(&unique_name)?;
 		let count = db.how_many_needed(recipe_unique_name, &unique_name)?;
 		let active_relics = db.active_component_relics(&unique_name)?;
-		let resurgence_relics = Default::default();
+		let resurgence_relics = db.resurgence_component_relics(&unique_name)?;
 		let recipe = db.recipe(&unique_name)?
 			.map(|r|Recipe::new(db, r))
 			.transpose()?;

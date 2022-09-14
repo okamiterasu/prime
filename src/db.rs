@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS "RELIC" (
 );
 DROP TABLE IF EXISTS "RESURGENCE_RELIC";
 CREATE TABLE IF NOT EXISTS "RESURGENCE_RELIC" (
-	"unique_name"	INTEGER NOT NULL,
+	"unique_name"	TEXT NOT NULL,
 	PRIMARY KEY("unique_name")
 );
 COMMIT;"#;
@@ -124,6 +124,28 @@ SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
 	WHERE
 		RECIPE.unique_name = ?1"#;
 
+const RESURGENCE_COMPONENT_RELICS: &str = r#"
+SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
+	FROM RELIC_REWARD
+		INNER JOIN RELIC
+			ON RELIC_REWARD.relic = RELIC.unique_name
+		INNER JOIN RESURGENCE_RELIC
+			ON RELIC.name = RESURGENCE_RELIC.unique_name
+	WHERE
+		RELIC_REWARD.name = ?1"#;
+
+const RESURGENCE_RECIPE_RELICS: &str = r#"
+SELECT DISTINCT RELIC.name, RELIC_REWARD.rarity
+	FROM RECIPE
+		INNER JOIN RELIC_REWARD
+			ON RECIPE.unique_name = RELIC_REWARD.name
+		INNER JOIN RELIC
+			ON RELIC_REWARD.relic = RELIC.unique_name
+		INNER JOIN RESURGENCE_RELIC
+			ON RELIC.name = RESURGENCE_RELIC.unique_name
+	WHERE
+		RECIPE.unique_name = ?1"#;
+
 const RECIPE: &str = r#"
 SELECT unique_name
 	FROM RECIPE
@@ -138,8 +160,10 @@ pub(crate) struct Database
 	resource_common_name: Statement<'static>,
 	_resource_unique_name: Statement<'static>,
 	how_many_needed: Statement<'static>,
-	component_relics: Statement<'static>,
-	recipe_relics: Statement<'static>,
+	active_component_relics: Statement<'static>,
+	active_recipe_relics: Statement<'static>,
+	resurgence_component_relics: Statement<'static>,
+	resurgence_recipe_relics: Statement<'static>,
 	recipe: Statement<'static>,
 }
 
@@ -158,6 +182,8 @@ impl Database
 		let how_many_needed = _conn.prepare(HOW_MANY_NEEDED)?;
 		let active_component_relics = _conn.prepare(ACTIVE_COMPONENT_RELICS)?;
 		let active_recipe_relics = _conn.prepare(ACTIVE_RECIPE_RELICS)?;
+		let resurgence_component_relics = _conn.prepare(RESURGENCE_COMPONENT_RELICS)?;
+		let resurgence_recipe_relics = _conn.prepare(RESURGENCE_RECIPE_RELICS)?;
 		let recipe = _conn.prepare(RECIPE)?;
 		Ok(Self{
 			_conn,
@@ -167,8 +193,10 @@ impl Database
 			resource_common_name,
 			_resource_unique_name: resource_unique_name,
 			how_many_needed,
-			component_relics: active_component_relics,
-			recipe_relics: active_recipe_relics,
+			active_component_relics,
+			active_recipe_relics,
+			resurgence_component_relics,
+			resurgence_recipe_relics,
 			recipe})
 	}
 
@@ -184,49 +212,62 @@ impl Database
 	pub(crate) fn populate(conn: &mut Connection, cache_dir: &Path) -> Result<()>
 	{
 		
-		let index = cache::load_index(&cache_dir.join("index_en.txt"))?;
+		let index = cache::load_index(&cache_dir.join("index_en.txt"))
+			.context("loading index")?;
 		let t = conn.transaction()?;
 		{
 			let mut item = t.prepare("INSERT OR IGNORE INTO ITEM(unique_name, name) VALUES (?1, ?2)")?;
 			// warframes
 			let mut wf = t.prepare("INSERT OR IGNORE INTO WARFRAME(unique_name) VALUES (?1)")?;
-			for warframe in cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])?
+			for warframe in cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])
+				.context("loading warframe manifest")?
 			{
 				let unique_name = &warframe.unique_name;
-				let common_name = warframe.name.strip_prefix("<ARCHWING> ").unwrap_or(&warframe.name);
-				item.execute([unique_name, common_name])?;
-				wf.execute([unique_name])?;
+				let common_name = warframe.name.strip_prefix("<ARCHWING> ")
+					.unwrap_or(&warframe.name);
+				item.execute([unique_name, common_name])
+					.context(format!("Adding item to db: {common_name}"))?;
+				wf.execute([unique_name])
+					.context(format!("Adding warframe to db: {common_name}"))?;
 			}
 			// weapons
 			let mut wp = t.prepare("INSERT OR IGNORE INTO WEAPON(unique_name) VALUES (?1)")?;
-			for weapon in cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])?
+			for weapon in cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])
+				.context("loading weapon manifest")?
 			{
 				let unique_name = &weapon.unique_name;
 				let common_name = &weapon.name;
-				item.execute([unique_name, common_name])?;
-				wp.execute([unique_name])?;
+				item.execute([unique_name, common_name])
+					.context(format!("Adding item to db: {common_name}"))?;
+				wp.execute([unique_name])
+					.context(format!("Adding weapon to db: {common_name}"))?;
 			}
 			// recipes
 			let mut rec = t.prepare("INSERT OR IGNORE INTO RECIPE(unique_name, result_type) VALUES (?1, ?2)")?;
 			let mut req = t.prepare("INSERT OR IGNORE INTO REQUIRES(recipe_unique_name, item_type, item_count) VALUES (?1, ?2, ?3)")?;
-			for recipe in cache::load_recipes(cache_dir, &index["ExportRecipes_en.json"])?
+			for recipe in cache::load_recipes(cache_dir, &index["ExportRecipes_en.json"])
+				.context("loading recipe manifest")?
 			{
 				let unique_name = &recipe.unique_name;
 				let result_type = &recipe.result_type;
-				rec.execute([unique_name, result_type])?;
+				rec.execute([unique_name, result_type])
+					.context(format!("Adding recipe to db: {unique_name}"))?;
 				for ingredient in recipe.ingredients
 				{
-					req.execute(params![unique_name, ingredient.item_type, ingredient.item_count])?;
+					req.execute(params![unique_name, ingredient.item_type, ingredient.item_count])
+						.context(format!("Adding ingredient to db: {ingredient:#?}"))?;
 				}
 			}
 			// relics
 			let mut rel = t.prepare("INSERT OR IGNORE INTO RELIC(unique_name, name) VALUES (?1, ?2)")?;
 			let mut rew = t.prepare("INSERT OR IGNORE INTO RELIC_REWARD(relic, name, rarity) VALUES (?1, ?2, ?3)")?;
-			for relic in cache::load_relics(cache_dir, &index["ExportRelicArcane_en.json"])?
+			for relic in cache::load_relics(cache_dir, &index["ExportRelicArcane_en.json"])
+				.context("loading relic manifest")?
 			{
 				let unique_name = &relic.unique_name;
 				let name = &relic.name;
-				rel.execute([unique_name, name])?;
+				rel.execute([unique_name, name])
+					.context(format!("Adding relic to db: {unique_name}"))?;
 				for reward in relic.relic_rewards
 				{
 					let reward_name = reward.reward_name
@@ -236,19 +277,35 @@ impl Database
 					let reward_name = reward_name
 						.strip_suffix('/')
 						.unwrap_or(&reward_name);
-					rew.execute(params![unique_name, reward_name, reward.rarity.as_str()])?;
+					rew.execute(params![unique_name, reward_name, reward.rarity.as_str()])
+						.context(format!("Adding relic reward to db: {reward_name}"))?;
 				}
 			}
 			let mut acr = t.prepare("INSERT OR IGNORE INTO ACTIVE_RELIC(unique_name) VALUES (?1)")?;
-			for active_relic in cache::active_relics(&cache_dir.join("droptable.html"))?
+			for active_relic in cache::active_relics(&cache_dir.join("droptable.html"))
+				.context("loading active relic list")?
 			{
-				acr.execute([active_relic])?;
+				acr.execute([&active_relic])
+					.context(format!("adding active relic to db: {active_relic}"))?;
 			}
+			let mut rer = t.prepare("INSERT OR IGNORE INTO RESURGENCE_RELIC(unique_name) VALUES (?1)")?;
+			let mut rcn = t.prepare("SELECT name FROM RELIC WHERE unique_name = ?")?;
+			for resurgence_relic in cache::resurgence_relics(&cache_dir.join("worldstate.json"))
+				.context("loading resurgence relic list")?
+			{
+				let common_name: String = rcn.query_row([&resurgence_relic], |r|r.get(0))
+					.context(format!("querying common name for resurgence relic: {resurgence_relic}"))?;
+				rer.execute([&common_name])
+					.context(format!("adding resurgence relic to db: {common_name}"))?;
+			}
+
 			// resources
 			let mut res = t.prepare("INSERT OR IGNORE INTO RESOURCE(unique_name, common_name) VALUES (?1, ?2)")?;
-			for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])?
+			for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])
+				.context("loading resource manifest")?
 			{
-				res.execute([resource.unique_name, resource.name])?;
+				res.execute([&resource.unique_name, &resource.name])
+					.context(format!("adding resource to db: {resource:#?}"))?;
 			}
 		}
 		t.commit()?;
@@ -309,7 +366,7 @@ impl Database
 
 	pub(crate) fn active_component_relics(&mut self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.component_relics
+		let response = self.active_component_relics
 			.query([component_unique_name])?
 			.mapped(|r|{
 				let relic: String = r.get(0)?;
@@ -323,7 +380,35 @@ impl Database
 
 	pub(crate) fn active_recipe_relics(&mut self, result_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.recipe_relics
+		let response = self.active_recipe_relics
+			.query([result_unique_name])?
+			.mapped(|r|{
+				let relic: String = r.get(0)?;
+				let rarity: String = r.get(1)?;
+				Ok((relic, rarity))})
+			.flatten()
+			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect();
+		Ok(response)
+	}
+
+	pub(crate) fn resurgence_component_relics(&mut self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
+	{
+		let response = self.resurgence_component_relics
+			.query([component_unique_name])?
+			.mapped(|r|{
+				let relic: String = r.get(0)?;
+				let rarity: String = r.get(1)?;
+				Ok((relic, rarity))})
+			.flatten()
+			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect();
+		Ok(response)
+	}
+
+	pub(crate) fn resurgence_recipe_relics(&mut self, result_unique_name: &str) -> Result<Vec<crate::Relic>>
+	{
+		let response = self.resurgence_recipe_relics
 			.query([result_unique_name])?
 			.mapped(|r|{
 				let relic: String = r.get(0)?;
