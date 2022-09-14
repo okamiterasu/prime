@@ -211,14 +211,24 @@ fn main() -> Result<()>
 // If they are not the same, returns both raw and parsed live version.
 fn check_for_manifest_updates(dir: &Path) -> Result<Option<(HashMap<String, String>, String)>>
 {
-	let (live_index, live_index_raw) = live::index()
-		.context("Could not load live index")?;
-	let local_index_path = dir.join("index_en.txt");
-	let local_index = cache::load_index(&local_index_path)
+	fn parse_live_index(index: &str) -> HashMap<String, String>
+	{
+		index.lines()
+			.map(|l|(&l[0..l.len()-26], l))
+			.map(|(k, v)|(k.to_owned(), v.to_owned()))
+			.collect()
+	}
+
+	let live_index_raw = live::index()
+		.context("loading live index")?;
+	let live_index = parse_live_index(&live_index_raw);
+	let local_index = cache::load_index(&dir.join("index_en.txt"))
 		.unwrap_or_default();
 	let is_different = live_index != local_index;
 	Ok(is_different.then_some((live_index, live_index_raw)))
 }
+
+
 
 fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 {

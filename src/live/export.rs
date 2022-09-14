@@ -1,5 +1,4 @@
 use std::io;
-use std::collections::HashMap;
 
 use anyhow::Result;
 
@@ -9,13 +8,13 @@ const MANIFEST_TEMPLATE: &str = "https://content.warframe.com/PublicExport/Manif
 pub(crate) fn load_manifest(name: &str) -> Result<String>
 {
 	let url = format!("{}/{}", MANIFEST_TEMPLATE, name);
-	ureq::get(&url)
-		.call()?
-		.into_string()
+	let response = ureq::get(&url)
+		.call()?;
+	response.into_string()
 		.map_err(|e|e.into())
 }
 
-pub fn index() -> Result<(HashMap<String, String>, String)>
+pub fn index() -> Result<String>
 {
 	let index_url = format!("{EXPORT}/index_en.txt.lzma");
 	let response = ureq::get(&index_url).call()?;
@@ -24,9 +23,5 @@ pub fn index() -> Result<(HashMap<String, String>, String)>
 		&mut io::BufReader::new(response.into_reader()),
 		&mut decompressed)?;
 	let i = String::from_utf8(decompressed)?;
-	let index = i.lines()
-		.map(|l|(&l[0..l.len()-26], l))
-		.map(|(k, v)|(k.to_string(), v.to_string()))
-		.collect();
-	Ok((index, i))
+	Ok(i)
 }
