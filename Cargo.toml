@@ -14,4 +14,4 @@ ureq = { version = "2.4", features = ["json"] }
 lzma-rs = "0.2"
 scraper = "0.12"
 anyhow = { version="1.0", features=["backtrace"] }
-eframe = "0.18.0"
+eframe = "0.18"
