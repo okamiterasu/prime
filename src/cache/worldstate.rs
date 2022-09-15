@@ -1,10 +1,19 @@
-use std::{path::Path, io::BufReader, fs::File};
-use scraper::{Html, Selector};
+use std::path::Path;
 use anyhow::Result;
 use serde::Deserialize;
 
-pub(crate) fn active_relics(file_path: &Path) -> Result<Vec<String>>
+fn is_relic(item: &str) -> bool
 {
+	item.starts_with("Lith")
+		||item.starts_with("Meso")
+		||item.starts_with("Neo")
+		||item.starts_with("Axi")
+}
+
+pub fn active_relics(file_path: &Path) -> Result<Vec<String>>
+{
+	use scraper::{Html, Selector};
+
 	if !file_path.exists()
 	{
 		let table = crate::live::droptable()?;
@@ -17,42 +26,39 @@ pub(crate) fn active_relics(file_path: &Path) -> Result<Vec<String>>
 	let relic_selector = Selector::parse(r#"td"#).unwrap();
 	let relics = table.select(&relic_selector)
 		.flat_map(|e|e.text().next())
-		.filter(|r|
-		{
-			r.starts_with("Lith")||
-			r.starts_with("Meso")||
-			r.starts_with("Neo")||
-			r.starts_with("Axi")
-		})
+		.filter(|r|is_relic(*r))
 		.map(|r|r.trim_end_matches(" (Radiant)"))
 		.map(|r|r.to_string())
 		.collect();
 	Ok(relics)
 }
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct State
 {
 	prime_vault_traders: Vec<PrimeVaultTrader>
 }
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct PrimeVaultTrader
 {
 	pub manifest: Vec<Item>
 }
 
-#[derive(Deserialize, Clone, Debug, Default)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct Item
 {
 	pub item_type: String,
 }
 
-pub(crate) fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
+pub fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 {
+	use std::fs::File;
+	use std::io::BufReader;
+
 	if !file_path.exists()
 	{
 		let worldstate = crate::live::worldstate()?;
@@ -61,13 +67,16 @@ pub(crate) fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 
 	let reader = BufReader::new(File::open(file_path)?);
 	let world_state: State = serde_json::from_reader(reader)?;
-	let relics = world_state.prime_vault_traders.iter()
+	let store_items = world_state.prime_vault_traders.iter()
 		.flat_map(|t|&t.manifest)
 		.map(|i|&i.item_type[..])
-		.filter(|i|i.starts_with("/Lotus/StoreItems/Types/Game/Projections/"))
-		.map(|i|i.split('/'))
-		.map(|i|i.filter(|s|*s != "StoreItems"))
-		.map(|i|i.collect())
+		.filter(|i|i.starts_with("/Lotus/StoreItems/Types/Game/Projections/"));
+	// Resurgence store items contain a "StoreItems" node in the path which
+	// needs to be removed to make it line up with the rest of the names.
+	// TODO: I feel like there should be a better way to do this.
+	let normalized_store_items = store_items
+		.map(|i|i.split('/').filter(|s|*s != "StoreItems").collect());
+	let relics = normalized_store_items
 		.map(|i: Vec<_>|i.join("/"))
 		.collect();
 	Ok(relics)
