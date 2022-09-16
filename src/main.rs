@@ -150,7 +150,7 @@ impl Tracked
 	{
 		let common_name = db.item_common_name(&unique_name)?;
 		let recipe_unique_names = db.recipes(&unique_name)?;
-		if recipe_unique_names.len() == 0
+		if recipe_unique_names.is_empty()
 		{
 			bail!("Recipe not found for {}", unique_name)
 		}
@@ -199,8 +199,11 @@ fn main() -> Result<()>
 
 	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut db)?;
 
-	let mut opts = eframe::NativeOptions::default();
-	opts.initial_window_size = Some(egui::Vec2::new(1024.0, 768.0));
+	let opts = eframe::NativeOptions
+	{
+		initial_window_size: Some(egui::Vec2::new(1024.0, 768.0)),
+		..Default::default()
+	};
 	eframe::run_native(
 		"Recipe Tracker",
 		opts,
@@ -252,7 +255,7 @@ fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<(
 		let file = file?;
 		let file_name = file.file_name();
 		let file_name = file_name.to_str()
-			.ok_or(anyhow!("Non-utf8 string"))?;
+			.ok_or_else(||anyhow!("Non-utf8 string"))?;
 		if !file_name.starts_with("Export") {continue}
 		if file_name != index[&file_name[0..file_name.len()-26]]
 		{

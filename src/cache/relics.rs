@@ -5,11 +5,12 @@ use serde::{Deserialize};
 use super::load;
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all="UPPERCASE")]
 pub enum Rarity
 {
-	COMMON,
-	UNCOMMON,
-	RARE
+	Common,
+	Uncommon,
+	Rare
 }
 impl Rarity
 {
@@ -17,9 +18,9 @@ impl Rarity
 	{
 		match self
 		{
-			Self::COMMON=>"COMMON",
-			Self::UNCOMMON=>"UNCOMMON",
-			Self::RARE=>"RARE"
+			Self::Common=>"COMMON",
+			Self::Uncommon=>"UNCOMMON",
+			Self::Rare=>"RARE"
 		}
 	}
 }
@@ -30,9 +31,9 @@ impl TryFrom<&str> for Rarity
 	{
 		match i
 		{
-			"COMMON"=>Ok(Self::COMMON),
-			"UNCOMMON"=>Ok(Self::UNCOMMON),
-			"RARE"=>Ok(Self::RARE),
+			"COMMON"=>Ok(Self::Common),
+			"UNCOMMON"=>Ok(Self::Uncommon),
+			"RARE"=>Ok(Self::Rare),
 			_=>Err(())
 		}
 	}

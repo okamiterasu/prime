@@ -160,8 +160,8 @@ fn recipe_group(
 				component_common_name,
 				owned_components,
 				required,
-				&active_relics,
-				&resurgence_relics);
+				active_relics,
+				resurgence_relics);
 		}
 	})
 }
