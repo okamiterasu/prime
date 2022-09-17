@@ -211,6 +211,7 @@ fn main() -> Result<()>
 		"Recipe Tracker",
 		opts,
 		Box::new(|_cc| Box::new(ui::App::with_state(db, tracked, owned, cache_dir))));
+	Ok(())
 }
 
 // Downloads the index from live and compares it to the local version.

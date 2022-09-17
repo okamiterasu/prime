@@ -43,7 +43,7 @@ impl App
 
 impl eframe::App for App
 {
-	fn on_exit(&mut self, _gl: &eframe::glow::Context)
+	fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>)
 	{
 		cache::save_state(
 			&self.cache_dir.join("tracked.json"),

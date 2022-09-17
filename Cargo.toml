@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rusqlite = { version = "0.26", features=["bundled"] }
+rusqlite = { version = "0.28", features=["bundled"] }
 lazy_static = "1.4"
-ureq = { version = "2.4", features = ["json"] }
+ureq = { version = "2.5", features = ["json"] }
 lzma-rs = "0.2"
-scraper = "0.12"
+scraper = "0.13"
 anyhow = { version="1.0", features=["backtrace"] }
-eframe = "0.18"
+eframe = "0.19"
