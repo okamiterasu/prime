@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::Deserialize;
 use super::load;
 
@@ -30,7 +30,9 @@ pub struct Ingredient
 
 pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Recipe>>
 {
-	let file = load::load(cache, manifest)?;
-	let parsed: Export = serde_json::from_str(&file)?;
-	Ok(parsed.export_recipes)
+	let file = load::load(cache, manifest)
+		.context("Loading manifest")?;
+	serde_json::from_str(&file)
+		.map(|e: Export|e.export_recipes)
+		.context("Parsing manifest")
 }

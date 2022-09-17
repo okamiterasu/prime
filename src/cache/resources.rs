@@ -1,4 +1,5 @@
 use std::path::Path;
+use anyhow::{Result, Context};
 use serde::Deserialize;
 use super::load;
 
@@ -17,9 +18,11 @@ pub struct Resource
     pub name: String,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> anyhow::Result<Vec<Resource>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Resource>>
 {
-	let file = load::load(cache, manifest)?;
-	let parsed: Export = serde_json::from_str(&file)?;
-	Ok(parsed.export_resources)
+	let file = load::load(cache, manifest)
+		.context("Loading manifest")?;
+	serde_json::from_str(&file)
+		.map(|e: Export|e.export_resources)
+		.context("Parsing manifest")
 }

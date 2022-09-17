@@ -1,12 +1,13 @@
-use anyhow::Result;
+use anyhow::{Result, Context};
 
 const DROPTABLE: &str = "https://www.warframe.com/droptables";
 
 pub(crate) fn droptable() -> Result<String>
 {
 	ureq::get(DROPTABLE)
-		.call()?
+		.call()
+		.context("Sending GET request for the droptable")?
 		.into_string()
-		.map_err(|e|e.into())
+		.context("Parsing response from droptable GET")
 }
 

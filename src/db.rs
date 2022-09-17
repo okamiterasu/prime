@@ -205,13 +205,14 @@ impl Database
 		let db_path = cache_dir.join(&db_filename);
 		let mut conn = Connection::open(db_path)?;
 		conn.execute_batch(SCHEMA)?;
-		Database::populate(&mut conn, cache_dir)?;
+		Database::populate(&mut conn, cache_dir)
+			.context("Pupulating Database")?;
 		Database::open(cache_dir, db_filename)
+			.context("Opening Database")
 	}
 
 	pub(crate) fn populate(conn: &mut Connection, cache_dir: &Path) -> Result<()>
 	{
-		
 		let index = cache::load_index(&cache_dir.join("index_en.txt"))
 			.context("loading index")?;
 		let t = conn.transaction()?;
@@ -314,16 +315,17 @@ impl Database
 
 	pub fn requirements(&mut self, recipe_unique_name: &str) -> Result<Vec<(String, u32)>>
 	{
-		let response = self.components
-			.query([recipe_unique_name])?
+		self.components
+			.query([recipe_unique_name])
+			.with_context(||format!("Running query for requirements of {recipe_unique_name}"))?
 			.mapped(|r|
 			{
 				let name = r.get(1)?;
 				let count = r.get(2)?;
 				Ok((name, count))
-			}).flatten()
-			.collect();
-		Ok(response)
+			})
+			.map(|r|r.map_err(|e|e.into()))
+			.collect()
 	}
 
 	pub fn item_common_name(&mut self, unique_name: &str) -> Result<Option<String>>
@@ -331,14 +333,14 @@ impl Database
 		self.item_common_name
 			.query_row([unique_name], |r|r.get(0))
 			.optional()
-			.map_err(|e|e.into())
+			.with_context(||format!("Running query for common name of {unique_name}"))
 	}
 
 	pub fn item_unique_name(&mut self, common_name: &str) -> Result<String>
 	{
 		self.item_unique_name
 			.query_row([common_name], |r|r.get(0))
-			.map_err(|e|e.into())
+			.with_context(||format!("Running query for unique name of {common_name}"))
 	}
 
 	pub fn resource_common_name(&mut self, unique_name: &str) -> Result<Option<String>>
@@ -346,78 +348,85 @@ impl Database
 		self.resource_common_name
 			.query_row([unique_name], |r|r.get(0))
 			.optional()
-			.map_err(|e|e.into())
+			.with_context(||format!("Running query for common name of {unique_name}"))
 	}
 
 	pub fn _resource_unique_name(&mut self, common_name: &str) -> Result<String>
 	{
 		self._resource_unique_name
 			.query_row([common_name], |r|r.get(0))
-			.with_context(||format!("Unique name of resource '{}' not found", common_name))
+			.with_context(||format!("Running query for unique name of {common_name}"))
 	}
 
-	pub fn how_many_needed(&mut self, recipe_unique_name: &str, resource_unique_name: &str) -> rusqlite::Result<u32>
+	pub fn how_many_needed(&mut self, recipe_unique_name: &str, resource_unique_name: &str) -> Result<u32>
 	{
-		let response: u32 = self.how_many_needed.query_row(
+		self.how_many_needed.query_row(
 			[recipe_unique_name, resource_unique_name],
-			|r|r.get(0))?;
-		Ok(response)
+			|r|r.get(0))
+			.with_context(||format!("Running query for number of '{resource_unique_name}' needed for '{recipe_unique_name}'"))
 	}
 
 	pub(crate) fn active_component_relics(&mut self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.active_component_relics
+		self.active_component_relics
 			.query([component_unique_name])?
-			.mapped(|r|{
+			.mapped(|r|
+			{
 				let relic: String = r.get(0)?;
 				let rarity: String = r.get(1)?;
-				Ok((relic, rarity))})
+				Ok((relic, rarity))
+			})
 			.flatten()
-			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
-			.collect();
-		Ok(response)
+			.map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect()
 	}
 
 	pub(crate) fn active_recipe_relics(&mut self, result_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.active_recipe_relics
-			.query([result_unique_name])?
-			.mapped(|r|{
+		self.active_recipe_relics
+			.query([result_unique_name])
+			.with_context(||format!("Running query for currently active relics that drop blueprints for {result_unique_name}"))?
+			.mapped(|r|
+			{
 				let relic: String = r.get(0)?;
 				let rarity: String = r.get(1)?;
-				Ok((relic, rarity))})
+				Ok((relic, rarity))
+			})
 			.flatten()
-			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
-			.collect();
-		Ok(response)
+			.map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect()
 	}
 
 	pub(crate) fn resurgence_component_relics(&mut self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.resurgence_component_relics
-			.query([component_unique_name])?
-			.mapped(|r|{
+		self.resurgence_component_relics
+			.query([component_unique_name])
+			.with_context(||format!("Running query for active resurgence relics that drop {component_unique_name}"))?
+			.mapped(|r|
+			{
 				let relic: String = r.get(0)?;
 				let rarity: String = r.get(1)?;
-				Ok((relic, rarity))})
+				Ok((relic, rarity))
+			})
 			.flatten()
-			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
-			.collect();
-		Ok(response)
+			.map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect()
 	}
 
 	pub(crate) fn resurgence_recipe_relics(&mut self, result_unique_name: &str) -> Result<Vec<crate::Relic>>
 	{
-		let response = self.resurgence_recipe_relics
-			.query([result_unique_name])?
-			.mapped(|r|{
+		self.resurgence_recipe_relics
+			.query([result_unique_name])
+			.with_context(||format!("Running query for active resurgence relics that drop blueprints for {result_unique_name}"))?
+			.mapped(|r|
+			{
 				let relic: String = r.get(0)?;
 				let rarity: String = r.get(1)?;
-				Ok((relic, rarity))})
+				Ok((relic, rarity))
+			})
 			.flatten()
-			.flat_map(|(name, rarity)|crate::Relic::new(&name, &rarity))
-			.collect();
-		Ok(response)
+			.map(|(name, rarity)|crate::Relic::new(&name, &rarity))
+			.collect()
 	}
 
 	pub fn recipe(&mut self, result_unique_name: &str) -> Result<Option<String>>
@@ -425,15 +434,15 @@ impl Database
 		self.recipe
 			.query_row([result_unique_name],|r|r.get(0))
 			.optional()
-			.map_err(|e|e.into())
+			.with_context(||format!("Running query for a recipe that create {result_unique_name}"))
 	}
 
 	pub fn recipes(&mut self, result_unique_name: &str) -> Result<Vec<String>>
 	{
-		let res = self.recipe
-			.query_map([result_unique_name], |r|r.get(0))?
-			.flatten()
-			.collect();
-		Ok(res)
+		self.recipe
+			.query_map([result_unique_name], |r|r.get(0))
+			.with_context(||format!("Running query for recipes that create {result_unique_name}"))?
+			.map(|r|r.map_err(|e|e.into()))
+			.collect()
 	}
 }

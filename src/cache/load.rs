@@ -1,7 +1,10 @@
 use std::path::Path;
+
+use anyhow::Result;
+
 use crate::live;
 
-pub(super) fn load(cache: &Path, manifest: &str) -> anyhow::Result<String>
+pub(super) fn load(cache: &Path, manifest: &str) -> Result<String>
 {
 	let file_path = cache.join(manifest);
 	let file = match std::fs::read_to_string(&file_path)
@@ -14,8 +17,9 @@ pub(super) fn load(cache: &Path, manifest: &str) -> anyhow::Result<String>
 			contents
 		}
 	};
-	let escaped = file
-		.replace(r"\r", "")
-		.replace(&['\r', '\n'][..], "");
+	
+	// Provided files tend to have erroneous Windows newlines that can break
+	// parsing and deserialization
+	let escaped = file.replace("\r\n", "");
 	Ok(escaped)
 }

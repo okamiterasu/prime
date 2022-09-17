@@ -1,4 +1,5 @@
-use std::path::{Path};
+use std::path::Path;
+use anyhow::{Result, Context};
 use serde::Deserialize;
 use super::load;
 
@@ -6,20 +7,22 @@ use super::load;
 #[serde(rename_all = "PascalCase")]
 pub struct Export
 {
-    export_weapons: Vec<Weapon>,
+	export_weapons: Vec<Weapon>,
 }
 
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Weapon
 {
-    pub unique_name: String,
-    pub name: String,
+	pub unique_name: String,
+	pub name: String,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> anyhow::Result<Vec<Weapon>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Weapon>>
 {
-	let file = load::load(cache, manifest)?;
-	let parsed: Export = serde_json::from_str(&file)?;
-	Ok(parsed.export_weapons)
+	let file = load::load(cache, manifest)
+		.context("Loading manifest")?;
+	serde_json::from_str(&file)
+		.map(|e: Export|e.export_weapons)
+		.context("Parsing manifest")
 }

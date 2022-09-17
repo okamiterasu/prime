@@ -1,5 +1,6 @@
 use std::path::{Path};
 
+use anyhow::{Result, Context, anyhow};
 use serde::{Deserialize};
 
 use super::load;
@@ -26,7 +27,7 @@ impl Rarity
 }
 impl TryFrom<&str> for Rarity
 {
-	type Error = ();
+	type Error = anyhow::Error;
 	fn try_from(i: &str) -> Result<Self, Self::Error>
 	{
 		match i
@@ -34,7 +35,7 @@ impl TryFrom<&str> for Rarity
 			"COMMON"=>Ok(Self::Common),
 			"UNCOMMON"=>Ok(Self::Uncommon),
 			"RARE"=>Ok(Self::Rare),
-			_=>Err(())
+			_=>Err(anyhow!("Invalid rarity: {i}"))
 		}
 	}
 }
@@ -66,14 +67,23 @@ pub struct Relic
 
 impl TryFrom<RelicArcane> for Relic
 {
-    type Error = ();
+	type Error = anyhow::Error;
 
-    fn try_from(value: RelicArcane) -> Result<Self, Self::Error> {
-        if let Some(relic_rewards) = value.relic_rewards
+	fn try_from(value: RelicArcane) -> Result<Self, Self::Error> {
+		if let Some(relic_rewards) = value.relic_rewards
 		{
-			Ok(Self{unique_name: value.unique_name, name: value.name, relic_rewards})
-		} else {Err(())}
-    }
+			Ok(Self
+			{
+				unique_name: value.unique_name,
+				name: value.name,
+				relic_rewards
+			})
+		}
+		else
+		{
+			Err(anyhow!("RelicArcane {} was not a relic", value.name))
+		}
+	}
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -84,10 +94,12 @@ pub struct Reward
 	pub rarity: Rarity,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> anyhow::Result<Vec<Relic>>
+pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Relic>>
 {
-	let file = load::load(cache, manifest)?;
-	let parsed: Export = serde_json::from_str(&file)?;
+	let file = load::load(cache, manifest)
+		.context("Loading manifest")?;
+	let parsed: Export = serde_json::from_str(&file)
+		.context("Parsing manifest")?;
 	let relics = parsed.export_relic_arcane.into_iter()
 		.flat_map(|r|r.try_into())
 		.collect();

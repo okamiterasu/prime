@@ -194,10 +194,13 @@ fn main() -> Result<()>
 	let mut db = match db::Database::open(&cache_dir, "db.sqlite")
 	{
 		Ok(db)=>db,
-		Err(_)=>db::Database::create(&cache_dir, "db.sqlite")?
+		Err(_)=>db::Database::create(&cache_dir, "db.sqlite")
+			.context("Creating DB from scratch")?
 	};
 
-	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut db)?;
+	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut db)
+		.context("Loading tracked file")
+		.unwrap_or_default();
 
 	let opts = eframe::NativeOptions
 	{
@@ -241,7 +244,7 @@ fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 		if !path.exists()
 		{
 			let m = live::load_manifest(manifest)
-				.with_context(||format!("Could not load manifest: {manifest}"))?;
+				.with_context(||format!("Downloading manifest: {manifest}"))?;
 			std::fs::write(&path, m)?;
 		}
 	}
