@@ -94,17 +94,28 @@ impl Recipe
 {
 	fn new(db: &mut Database, unique_name: String) -> Result<Self>
 	{
-		let common_name = db.resource_common_name(&unique_name)?;
-		let active_relics = db.active_recipe_relics(&unique_name)?;
-		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)?;
+		let common_name = db.resource_common_name(&unique_name)
+			.context("querying common name")?;
+		let active_relics = db.active_recipe_relics(&unique_name)
+			.context("querying active relics")?;
+		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)
+			.context("querying resurgence relics")?;
 		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
 	}
 
 	fn with_common_name(db: &mut Database, unique_name: String, common_name: Option<String>) -> Result<Self>
 	{
-		let active_relics = db.active_recipe_relics(&unique_name)?;
-		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)?;
-		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
+		let active_relics = db.active_recipe_relics(&unique_name)
+			.context("querying active relics")?;
+		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)
+			.context("querying resurgence relics")?;
+		Ok(Self
+		{
+			common_name,
+			unique_name,
+			active_relics,
+			resurgence_relics
+		})
 	}
 }
 
@@ -123,14 +134,27 @@ impl Component
 {
 	pub(crate) fn new(db: &mut Database, unique_name: String, recipe_unique_name: &str) -> Result<Self>
 	{
-		let common_name = db.resource_common_name(&unique_name)?;
-		let count = db.how_many_needed(recipe_unique_name, &unique_name)?;
-		let active_relics = db.active_component_relics(&unique_name)?;
-		let resurgence_relics = db.resurgence_component_relics(&unique_name)?;
-		let recipe = db.recipe(&unique_name)?
+		let common_name = db.resource_common_name(&unique_name)
+			.context("querying common name")?;
+		let count = db.how_many_needed(recipe_unique_name, &unique_name)
+			.context("querying required count")?;
+		let active_relics = db.active_component_relics(&unique_name)
+			.context("querying active relics")?;
+		let resurgence_relics = db.resurgence_component_relics(&unique_name)
+			.context("querying resurgence relics")?;
+		let recipe = db.recipe(&unique_name)
+			.context("querying recipe")?
 			.map(|r|Recipe::new(db, r))
 			.transpose()?;
-		Ok(Self{unique_name, common_name, count, active_relics, resurgence_relics, recipe})
+		Ok(Self
+		{
+			unique_name,
+			common_name,
+			count,
+			active_relics,
+			resurgence_relics,
+			recipe
+		})
 	}
 }
 
@@ -139,30 +163,27 @@ pub(crate) struct Tracked
 {
 	pub(crate) common_name: Option<String>,
 	pub(crate) unique_name: String,
-	pub(crate) recipes: Vec<(Recipe, Vec<Component>)>,
-	// pub(crate) recipe: Recipe,
-	// pub(crate) components: Vec<Component>
+	pub(crate) recipes: Vec<(Recipe, Vec<Component>)>
 }
 
 impl Tracked
 {
 	fn new(db: &mut Database, unique_name: String) -> Result<Self>
 	{
-		let common_name = db.item_common_name(&unique_name)?;
-		let recipe_unique_names = db.recipes(&unique_name)?;
-		if recipe_unique_names.is_empty()
-		{
-			bail!("Recipe not found for {}", unique_name)
-		}
-		let mut recipes = vec![];
+		let common_name = db.item_common_name(&unique_name)
+			.context("Querying for common name")?;
+		let recipe_unique_names = db.recipes(&unique_name)
+			.context("Querying for recipe unique name")?;
+		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}
+		let mut recipes = Vec::with_capacity(recipe_unique_names.len());
 		for r in recipe_unique_names
 		{
 			let cn = common_name.as_ref().map(|c|format!("{} Blueprint", c));
 			let recipe = Recipe::with_common_name(db, r.clone(), cn)?;
 			let components = db.requirements(&r)?
 				.into_iter()
-				.flat_map(|c|Component::new(db, c.0, &recipe.unique_name))
-				.collect();
+				.map(|c|Component::new(db, c.0, &recipe.unique_name))
+				.collect::<Result<_>>()?;
 			recipes.push((recipe, components));
 		}
 		Ok(Self{common_name, unique_name, recipes})
@@ -175,16 +196,16 @@ fn main() -> Result<()>
 	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
 
 	if let Some((index, index_raw)) = check_for_manifest_updates(&cache_dir)
-		.context("Could not check for manifest updates")?
+		.context("Checking for manifest updates")?
 	{
 		std::fs::write(cache_dir.join("index_en.txt"), &index_raw)?;
 		update_manifests(&cache_dir, &index)
-			.context("Could not update manifests")?;
+			.context("Updating manifests")?;
 		remove_old_manifests(&cache_dir, &index)
-			.context("Could not remove old manifests")?;
+			.context("Removing old manifests")?;
 		// Worldstate has probably changed too, so update that as well.
 		let ws = live::droptable()
-			.context("Failed to scrape droptable")?;
+			.context("Downloading scrape droptable")?;
 		std::fs::write(cache_dir.join("droptable.html"), &ws)?;
 		// database is old, so delete and rebuild later.
 		// TODO: clear instead of full delete. Probably faster.
@@ -254,16 +275,18 @@ fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 
 fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 {
-	for file in std::fs::read_dir(&dir)?
+	for file in std::fs::read_dir(&dir)?.flatten()
 	{
-		let file = file?;
 		let file_name = file.file_name();
 		let file_name = file_name.to_str()
 			.ok_or_else(||anyhow!("Non-utf8 string"))?;
-		if !file_name.starts_with("Export") {continue}
-		if file_name != index[&file_name[0..file_name.len()-26]]
+		
+		if file_name.starts_with("Export") 
+		&& file_name != index[&file_name[0..file_name.len()-26]]
 		{
 			dbg!(file_name);
+			std::fs::remove_file(file.path())
+				.with_context(||format!("Deleting file: {:?}", file.file_name()))?;
 		}
 	}
 	Ok(())
