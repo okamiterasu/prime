@@ -265,7 +265,7 @@ fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 		let path = dir.join(manifest);
 		if !path.exists()
 		{
-			let m = live::load_manifest(manifest)
+			let m = live::manifest(manifest)
 				.with_context(||format!("Downloading manifest: {manifest}"))?;
 			std::fs::write(&path, m)?;
 		}

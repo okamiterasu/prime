@@ -4,5 +4,5 @@ mod export;
 
 pub(crate) use droptable::droptable;
 pub(crate) use export::index;
-pub(crate) use export::load_manifest;
+pub(crate) use export::manifest;
 pub(crate) use worldstate::worldstate;

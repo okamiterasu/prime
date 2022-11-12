@@ -12,7 +12,7 @@ pub(super) fn load(cache: &Path, manifest: &str) -> Result<String>
 		Ok(contents)=>contents,
 		Err(_)=>
 		{
-			let contents = live::load_manifest(manifest)?;
+			let contents = live::manifest(manifest)?;
 			std::fs::write(&file_path, &contents)?;
 			contents
 		}
