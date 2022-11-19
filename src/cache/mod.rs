@@ -1,6 +1,6 @@
 mod worldstate;
 mod index;
-mod recipes;
+pub mod recipes;
 mod relics;
 mod resources;
 mod warframes;
@@ -13,6 +13,7 @@ pub(crate) use worldstate::resurgence_relics;
 pub(crate) use index::load as load_index;
 pub(crate) use recipes::load as load_recipes;
 pub(crate) use relics::load as load_relics;
+pub(crate) use relics::Rarity as RelicRewardRarity;
 pub(crate) use resources::load as load_resources;
 pub(crate) use warframes::load as load_warframes;
 pub(crate) use weapons::load as load_weapons;

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 
-use crate::db;
+use crate::Data;
 
 #[derive(Eq, PartialEq, Clone, Default, Deserialize, Serialize, Debug)]
 struct Saved
@@ -15,16 +15,20 @@ struct Saved
 
 pub(crate) fn load(
 	tracked_path: &Path,
-	db: &mut db::Database) -> Result<(Vec<crate::Tracked>, HashMap<String, u32>)>
+	db: &mut Data) -> Result<(Vec<crate::Tracked>, HashMap<String, u32>)>
 {
 	let contents = std::fs::read_to_string(tracked_path)
 		.context("Loading tracked file from fs")?;
 	let parsed: Saved = serde_json::from_str(&contents)
-		.context("Parsing tracked")?;
-	let t = parsed.tracked.into_iter()
-		.map(|t|crate::Tracked::new(db, t))
-		.collect::<Result<Vec<crate::Tracked>>>()?;
-	Ok((t, parsed.owned))
+		.context("Parsing tracked file")?;
+	let mut enriched = Vec::with_capacity(parsed.tracked.len());
+	for tracked in parsed.tracked
+	{
+		let t = crate::Tracked::new(db, tracked.clone())
+			.with_context(||format!("Enriching {tracked}"))?;
+		enriched.push(t);
+	}
+	Ok((enriched, parsed.owned))
 }
 
 pub(crate) fn save(

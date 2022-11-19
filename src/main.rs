@@ -1,12 +1,12 @@
 use std::{path::{PathBuf, Path}, collections::HashMap};
 use anyhow::{Result, Error, anyhow, bail, Context};
-use db::Database;
 use eframe::egui;
+use structures::Data;
 
 mod live;
 mod ui;
-mod db;
 mod cache;
+mod structures;
 
 #[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
@@ -26,7 +26,7 @@ fn cache_dir() -> PathBuf
 	Ok(path)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord,Hash)]
 pub enum Rarity
 {
 	COMMON,
@@ -60,8 +60,8 @@ impl TryFrom<&str> for Rarity
 	}
 }
 
-#[derive(Debug)]
-struct Relic
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Relic
 {
 	name: String,
 	rarity: Rarity
@@ -92,7 +92,7 @@ struct Recipe
 
 impl Recipe
 {
-	fn new(db: &mut Database, unique_name: String) -> Result<Self>
+	fn new(db: &mut Data, unique_name: String) -> Result<Self>
 	{
 		let common_name = db.resource_common_name(&unique_name)
 			.context("querying common name")?;
@@ -103,12 +103,12 @@ impl Recipe
 		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
 	}
 
-	fn with_common_name(db: &mut Database, unique_name: String, common_name: Option<String>) -> Result<Self>
+	fn with_common_name(db: &mut Data, unique_name: String, common_name: Option<String>) -> Result<Self>
 	{
 		let active_relics = db.active_recipe_relics(&unique_name)
-			.context("querying active relics")?;
+			.context("Looking for active relics that reward recipe")?;
 		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)
-			.context("querying resurgence relics")?;
+			.context("Looking for resurgence relics that reward recipe")?;
 		Ok(Self
 		{
 			common_name,
@@ -132,10 +132,17 @@ struct Component
 
 impl Component
 {
-	pub(crate) fn new(db: &mut Database, unique_name: String, recipe_unique_name: &str) -> Result<Self>
+	pub(crate) fn new(db: &mut Data, unique_name: String, recipe_unique_name: &str) -> Result<Self>
 	{
-		let common_name = db.resource_common_name(&unique_name)
-			.context("querying common name")?;
+		let common_name = match db.resource_common_name(&unique_name)
+			.context("querying common name")?
+		{
+			Some(cn)=>Some(cn),
+			None=>
+			{
+				db.item_common_name(&unique_name)?
+			}
+		};
 		let count = db.how_many_needed(recipe_unique_name, &unique_name)
 			.context("querying required count")?;
 		let active_relics = db.active_component_relics(&unique_name)
@@ -168,7 +175,7 @@ pub(crate) struct Tracked
 
 impl Tracked
 {
-	fn new(db: &mut Database, unique_name: String) -> Result<Self>
+	fn new(db: &mut Data, unique_name: String) -> Result<Self>
 	{
 		let common_name = db.item_common_name(&unique_name)
 			.context("Querying for common name")?;
@@ -176,13 +183,17 @@ impl Tracked
 			.context("Querying for recipe unique name")?;
 		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}
 		let mut recipes = Vec::with_capacity(recipe_unique_names.len());
-		for r in recipe_unique_names
+		for unique_name in recipe_unique_names
 		{
-			let cn = common_name.as_ref().map(|c|format!("{} Blueprint", c));
-			let recipe = Recipe::with_common_name(db, r.clone(), cn)?;
-			let components = db.requirements(&r)?
+			let common_name = common_name.as_ref()
+				.map(|c|format!("{} Blueprint", c));
+			let recipe = Recipe::with_common_name(db, unique_name.clone(), common_name.clone())
+				.with_context(||format!("Creating recipe from {unique_name} and {common_name:?}"))?;
+			let components = db.requirements(&unique_name)
+				.with_context(||format!("Finding requirements for recipe {unique_name}"))?
 				.into_iter()
-				.map(|c|Component::new(db, c.0, &recipe.unique_name))
+				.map(|c|Component::new(db, c.0.clone(), &recipe.unique_name)
+					.with_context(||format!("Generating component data for {c:?}")))
 				.collect::<Result<_>>()?;
 			recipes.push((recipe, components));
 		}
@@ -203,25 +214,20 @@ fn main() -> Result<()>
 			.context("Updating manifests")?;
 		remove_old_manifests(&cache_dir, &index)
 			.context("Removing old manifests")?;
-		// Worldstate has probably changed too, so update that as well.
-		let ws = live::droptable()
-			.context("Downloading scrape droptable")?;
-		std::fs::write(cache_dir.join("droptable.html"), &ws)?;
-		// database is old, so delete and rebuild later.
-		// TODO: clear instead of full delete. Probably faster.
-		std::fs::remove_file(&cache_dir.join("db.sqlite"))?;
-	}
+		}
+	// Worldstate has probably changed too, so update that as well.
+	let dt = live::droptable()
+		.context("Downloading scrape droptable")?;
+	std::fs::write(cache_dir.join("droptable.html"), &dt)?;
 
-	let mut db = match db::Database::open(&cache_dir, "db.sqlite")
-	{
-		Ok(db)=>db,
-		Err(_)=>db::Database::create(&cache_dir, "db.sqlite")
-			.context("Creating DB from scratch")?
-	};
+	let ws = live::worldstate()
+		.context("Downloading world state")?;
+	std::fs::write(cache_dir.join("worldstate.json"), &ws)?;
 
-	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut db)
-		.context("Loading tracked file")
-		.unwrap_or_default();
+	let mut data = Data::from_cache(&cache_dir)?;
+
+	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut data)
+		.context("Loading tracked file")?;
 
 	let opts = eframe::NativeOptions
 	{
@@ -231,7 +237,7 @@ fn main() -> Result<()>
 	eframe::run_native(
 		"Recipe Tracker",
 		opts,
-		Box::new(|_cc| Box::new(ui::App::with_state(db, tracked, owned, cache_dir))));
+		Box::new(|_cc| Box::new(ui::App::with_state(data, tracked, owned, cache_dir))));
 	Ok(())
 }
 
@@ -284,7 +290,6 @@ fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<(
 		if file_name.starts_with("Export") 
 		&& file_name != index[&file_name[0..file_name.len()-26]]
 		{
-			dbg!(file_name);
 			std::fs::remove_file(file.path())
 				.with_context(||format!("Deleting file: {:?}", file.file_name()))?;
 		}

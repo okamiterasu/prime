@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::Rarity;
 use crate::Relic;
-use crate::db::Database;
+use crate::Data;
 use crate::cache;
 use crate::Tracked;
 
@@ -13,7 +13,7 @@ use egui::Color32;
 
 pub(crate) struct App
 {
-	db: Database,
+	db: Data,
 	tracked: Vec<Tracked>,
 	owned: HashMap<String, u32>,
 	add_search: String,
@@ -24,7 +24,7 @@ pub(crate) struct App
 impl App
 {
 	pub(crate) fn with_state(
-		db: Database,
+		db: Data,
 		tracked: Vec<Tracked>,
 		owned: HashMap<String, u32>,
 		cache_dir: PathBuf) -> Self
@@ -77,7 +77,7 @@ impl eframe::App for App
 fn header(
 	ui: &mut Ui,
 	add_search: &mut String,
-	db: &mut Database,
+	db: &mut Data,
 	tracked: &mut Vec<Tracked>) -> egui::InnerResponse<()>
 {
 	ui.heading("Recipe Tracker");
