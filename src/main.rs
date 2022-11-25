@@ -18,7 +18,7 @@ fn cache_dir() -> Result<PathBuf>
 }
 
 #[cfg(target_os = "linux")]
-fn cache_dir() -> PathBuf
+fn cache_dir() -> Result<PathBuf>
 {
 	let home = std::env::var("HOME")?;
 	let mut path = PathBuf::from(home);
