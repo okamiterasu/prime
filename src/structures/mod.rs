@@ -12,15 +12,16 @@ mod resources;
 mod active_relics;
 mod resurgence_relics;
 
+use active_relics::ActiveRelics;
+use crate::cache;
 use items::Items;
 use recipes::Recipes;
 use relics::Relics;
 use requires::Requires;
 use relic_rewards::RelicRewards;
 use resources::Resources;
-use active_relics::ActiveRelics;
 use resurgence_relics::ResurgenceRelics;
-use crate::cache;
+pub use types::{UniqueName, Count, CommonName};
 
 #[derive(Debug)]
 pub struct Data
@@ -56,15 +57,6 @@ impl Data
 			let common_name = weapon.name.as_ref();
 			items.add(unique_name, common_name);
 		}
-		// cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])?
-		// 	.into_iter()
-		// 	.map(|w|(w.unique_name, w.name))
-		// 	.for_each(|(u, c)|items.add(u, c));
-
-		// cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])?
-		// 	.into_iter()
-		// 	.map(|w|(w.unique_name, w.name))
-		// 	.for_each(|(u, c)|items.add(u, c));
 
 		let mut requires = Requires::default();
 		let mut recipes = Recipes::default();
@@ -132,45 +124,37 @@ impl Data
 		})
 	}
 
-	pub fn requirements(&self, recipe_unique_name: &str) -> Result<Vec<(String, u32)>>
+	pub fn requirements(&self, recipe_unique_name: impl Into<UniqueName>) -> Result<Vec<(UniqueName, Count)>>
 	{
-		let requires = self.requires.fetch_by_recipe_unique_name(recipe_unique_name)?;
-		let mut o = Vec::with_capacity(requires.len());
-		for require in requires
-		{
-			let (unique_name, count) = require;
-			o.push((unique_name.to_string(), count.to_u32()));
-		}
-		Ok(o)
+		self.requires.fetch_by_recipe_unique_name(recipe_unique_name.into())
 	}
 
-	pub fn item_common_name(&mut self, unique_name: &str) -> Result<Option<String>>
+	pub fn item_common_name(&mut self, unique_name: impl Into<UniqueName>) -> Result<Option<CommonName>>
 	{
-		let cn = self.items.fetch_by_unique_name(unique_name)?;
-		Ok(cn.map(|c|c.to_string()))
+		self.items.fetch_by_unique_name(unique_name.into())
 	}
 
-	pub fn item_unique_name(&mut self, common_name: &str) -> Result<String>
+	pub fn item_unique_name(&mut self, common_name: impl Into<CommonName>) -> Result<UniqueName>
 	{
-		self.items.fetch_by_common_name(common_name)
-			.map(|c|c.to_string())
+		self.items.fetch_by_common_name(common_name.into())
 	}
 
-	pub fn resource_common_name(&mut self, unique_name: &str) -> Result<Option<String>>
+	pub fn resource_common_name(&mut self, unique_name: impl Into<UniqueName>) -> Result<Option<CommonName>>
 	{
-		let cn = self.resources.fetch_by_unique_name(unique_name)?;
-		Ok(cn.map(|c|c.to_string()))
+		self.resources.fetch_by_unique_name(unique_name.into())
 	}
 
-	pub fn how_many_needed(&mut self, recipe_unique_name: &str, resource_unique_name: &str) -> Result<u32>
+	pub fn how_many_needed(&mut self, recipe_unique_name: impl Into<UniqueName>, resource_unique_name: impl Into<UniqueName>) -> Result<Count>
 	{
-		let requires = self.requires.fetch_by_recipe_unique_name(recipe_unique_name)?;
-		let (_item, count) = requires.into_iter().find(|i|i.0.as_str() == resource_unique_name)
+		let rec = recipe_unique_name.into();
+		let res = resource_unique_name.into();
+		let requires = self.requires.fetch_by_recipe_unique_name(rec)?;
+		let (_item, count) = requires.into_iter().find(|i|i.0 == res)
 			.ok_or_else(||anyhow!("Requirement does not exist"))?;
-		Ok(count.to_u32())
+		Ok(count)
 	}
 
-	pub fn active_component_relics(&self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
+	pub fn active_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name)?;
@@ -193,7 +177,7 @@ impl Data
 		Ok(relics)
 	}
 
-	pub fn active_recipe_relics(&self, recipe_unique_name: &str) -> Result<Vec<crate::Relic>>
+	pub fn active_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let recipe = self.recipes.fetch_by_unique_name(recipe_unique_name)
 			.context("Looking for recipes by unique_name")?;
@@ -217,7 +201,7 @@ impl Data
 		Ok(relics)
 	}
 
-	pub fn resurgence_component_relics(&self, component_unique_name: &str) -> Result<Vec<crate::Relic>>
+	pub fn resurgence_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name)?;
@@ -240,7 +224,7 @@ impl Data
 		Ok(relics)
 	}
 
-	pub fn resurgence_recipe_relics(&self, recipe_unique_name: &str) -> Result<Vec<crate::Relic>>
+	pub fn resurgence_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let recipe = self.recipes.fetch_by_unique_name(recipe_unique_name)?;
 		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe)?;
@@ -262,18 +246,18 @@ impl Data
 		Ok(relics)
 	}
 
-	pub fn recipes(&self, result_type: &str) -> Result<Vec<String>>
+	pub fn recipes(&self, result_type: impl Into<UniqueName>) -> Result<Vec<UniqueName>>
 	{
 		let recipes = self.recipes.fetch_by_result_type(result_type)?;
 		let mut t = Vec::with_capacity(recipes.len());
 		for recipe in recipes
 		{
-			t.push(recipe.to_string());
+			t.push(recipe);
 		}
 		Ok(t)
 	}
 
-	pub fn recipe(&self, result_type: &str) -> Result<Option<String>>
+	pub fn recipe(&self, result_type: impl Into<UniqueName>) -> Result<Option<UniqueName>>
 	{
 		Ok(self.recipes(result_type)?.pop())
 	}

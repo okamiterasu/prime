@@ -1,7 +1,7 @@
 use std::{path::{PathBuf, Path}, collections::HashMap};
 use anyhow::{Result, Error, anyhow, bail, Context};
 use eframe::egui;
-use structures::Data;
+use structures::{Data, CommonName, UniqueName, Count};
 
 mod live;
 mod ui;
@@ -84,30 +84,30 @@ impl Relic
 #[derive(Debug)]
 struct Recipe
 {
-	common_name: Option<String>,
-	unique_name: String,
+	common_name: Option<CommonName>,
+	unique_name: UniqueName,
 	active_relics: Vec<Relic>,
 	resurgence_relics: Vec<Relic>
 }
 
 impl Recipe
 {
-	fn new(db: &mut Data, unique_name: String) -> Result<Self>
+	fn new(db: &mut Data, unique_name: UniqueName) -> Result<Self>
 	{
-		let common_name = db.resource_common_name(&unique_name)
+		let common_name = db.resource_common_name(unique_name.as_str())
 			.context("querying common name")?;
-		let active_relics = db.active_recipe_relics(&unique_name)
+		let active_relics = db.active_recipe_relics(unique_name.as_str())
 			.context("querying active relics")?;
-		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)
+		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
 			.context("querying resurgence relics")?;
 		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
 	}
 
-	fn with_common_name(db: &mut Data, unique_name: String, common_name: Option<String>) -> Result<Self>
+	fn with_common_name(db: &mut Data, unique_name: UniqueName, common_name: Option<CommonName>) -> Result<Self>
 	{
-		let active_relics = db.active_recipe_relics(&unique_name)
+		let active_relics = db.active_recipe_relics(unique_name.as_str())
 			.context("Looking for active relics that reward recipe")?;
-		let resurgence_relics = db.resurgence_recipe_relics(&unique_name)
+		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
 			.context("Looking for resurgence relics that reward recipe")?;
 		Ok(Self
 		{
@@ -122,9 +122,9 @@ impl Recipe
 #[derive(Debug)]
 struct Component
 {
-	unique_name: String,
-	common_name: Option<String>,
-	count: u32,
+	unique_name: UniqueName,
+	common_name: Option<CommonName>,
+	count: Count,
 	active_relics: Vec<Relic>,
 	resurgence_relics: Vec<Relic>,
 	recipe: Option<Recipe>
@@ -132,24 +132,24 @@ struct Component
 
 impl Component
 {
-	pub(crate) fn new(db: &mut Data, unique_name: String, recipe_unique_name: &str) -> Result<Self>
+	pub(crate) fn new(db: &mut Data, unique_name: UniqueName, recipe_unique_name: UniqueName) -> Result<Self>
 	{
-		let common_name = match db.resource_common_name(&unique_name)
+		let common_name = match db.resource_common_name(unique_name.as_str())
 			.context("querying common name")?
 		{
 			Some(cn)=>Some(cn),
 			None=>
 			{
-				db.item_common_name(&unique_name)?
+				db.item_common_name(unique_name.as_str())?
 			}
 		};
-		let count = db.how_many_needed(recipe_unique_name, &unique_name)
+		let count = db.how_many_needed(recipe_unique_name, unique_name.as_str())
 			.context("querying required count")?;
-		let active_relics = db.active_component_relics(&unique_name)
+		let active_relics = db.active_component_relics(unique_name.clone())
 			.context("querying active relics")?;
-		let resurgence_relics = db.resurgence_component_relics(&unique_name)
+		let resurgence_relics = db.resurgence_component_relics(unique_name.clone())
 			.context("querying resurgence relics")?;
-		let recipe = db.recipe(&unique_name)
+		let recipe = db.recipe(unique_name.as_str())
 			.context("querying recipe")?
 			.map(|r|Recipe::new(db, r))
 			.transpose()?;
@@ -168,31 +168,33 @@ impl Component
 #[derive(Debug)]
 pub(crate) struct Tracked
 {
-	pub(crate) common_name: Option<String>,
-	pub(crate) unique_name: String,
+	pub(crate) common_name: Option<CommonName>,
+	pub(crate) unique_name: UniqueName,
 	pub(crate) recipes: Vec<(Recipe, Vec<Component>)>
 }
 
 impl Tracked
 {
-	fn new(db: &mut Data, unique_name: String) -> Result<Self>
+	fn new(db: &mut Data, unique_name: impl Into<UniqueName>) -> Result<Self>
 	{
-		let common_name = db.item_common_name(&unique_name)
+		let unique_name = unique_name.into();
+		let common_name = db.item_common_name(unique_name.clone())
 			.context("Querying for common name")?;
-		let recipe_unique_names = db.recipes(&unique_name)
+		let recipe_unique_names = db.recipes(unique_name.clone())
 			.context("Querying for recipe unique name")?;
 		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}
 		let mut recipes = Vec::with_capacity(recipe_unique_names.len());
 		for unique_name in recipe_unique_names
 		{
 			let common_name = common_name.as_ref()
-				.map(|c|format!("{} Blueprint", c));
+				.map(|c|format!("{} Blueprint", c))
+				.map(CommonName::from);
 			let recipe = Recipe::with_common_name(db, unique_name.clone(), common_name.clone())
 				.with_context(||format!("Creating recipe from {unique_name} and {common_name:?}"))?;
-			let components = db.requirements(&unique_name)
+			let components = db.requirements(unique_name.as_str())
 				.with_context(||format!("Finding requirements for recipe {unique_name}"))?
 				.into_iter()
-				.map(|c|Component::new(db, c.0.clone(), &recipe.unique_name)
+				.map(|c|Component::new(db, c.0.clone(), recipe.unique_name.clone())
 					.with_context(||format!("Generating component data for {c:?}")))
 				.collect::<Result<_>>()?;
 			recipes.push((recipe, components));

@@ -4,18 +4,18 @@ use std::collections::HashMap;
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 
-use crate::Data;
+use crate::{Data, structures::UniqueName};
 
 #[derive(Eq, PartialEq, Clone, Default, Deserialize, Serialize, Debug)]
 struct Saved
 {
-	tracked: Vec<String>,
-	owned: HashMap<String, u32>,
+	tracked: Vec<UniqueName>,
+	owned: HashMap<UniqueName, u32>,
 }
 
 pub(crate) fn load(
 	tracked_path: &Path,
-	db: &mut Data) -> Result<(Vec<crate::Tracked>, HashMap<String, u32>)>
+	db: &mut Data) -> Result<(Vec<crate::Tracked>, HashMap<UniqueName, u32>)>
 {
 	let contents = std::fs::read_to_string(tracked_path)
 		.context("Loading tracked file from fs")?;
@@ -34,7 +34,7 @@ pub(crate) fn load(
 pub(crate) fn save(
 	tracked_path: &Path,
 	tracked: &[crate::Tracked],
-	owned: &HashMap<String, u32>) -> Result<()>
+	owned: &HashMap<UniqueName, u32>) -> Result<()>
 {
 	let t: Vec<_> = tracked
 		.iter()

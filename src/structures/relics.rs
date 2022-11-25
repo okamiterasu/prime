@@ -26,7 +26,7 @@ impl Relics
 			.map(|cn|cn.clone())
 	}
 
-	pub fn fetch_by_common_name(
+	pub fn _fetch_by_common_name(
 		&self,
 		common_name: impl Into<CommonName>) -> Result<UniqueName>
 	{

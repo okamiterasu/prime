@@ -6,6 +6,7 @@ use crate::Relic;
 use crate::Data;
 use crate::cache;
 use crate::Tracked;
+use crate::structures::{CommonName, UniqueName, Count};
 
 use eframe::egui;
 use egui::Ui;
@@ -15,7 +16,7 @@ pub(crate) struct App
 {
 	db: Data,
 	tracked: Vec<Tracked>,
-	owned: HashMap<String, u32>,
+	owned: HashMap<UniqueName, u32>,
 	add_search: String,
 	to_remove: Option<usize>,
 	cache_dir: PathBuf
@@ -26,7 +27,7 @@ impl App
 	pub(crate) fn with_state(
 		db: Data,
 		tracked: Vec<Tracked>,
-		owned: HashMap<String, u32>,
+		owned: HashMap<UniqueName, u32>,
 		cache_dir: PathBuf) -> Self
 	{
 		Self
@@ -87,7 +88,7 @@ fn header(
 		ui.text_edit_singleline(add_search);
 		if ui.button("Add").clicked()
 		{
-			if let Ok(unique_name) = db.item_unique_name(add_search)
+			if let Ok(unique_name) = db.item_unique_name(add_search.as_str())
 			{
 				if let Ok(t) = Tracked::new(db, unique_name)
 				{
@@ -101,10 +102,10 @@ fn header(
 	})
 }
 
-fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap<String, u32>, to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
+fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap<UniqueName, u32>, to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
 {
-	let unique_name = &tracked.unique_name;
-	let common_name = tracked.common_name.as_deref();
+	let unique_name = tracked.unique_name.clone();
+	let common_name = tracked.common_name.clone();
 	ui.group(|ui|
 	{
 		ui.vertical(|ui|
@@ -112,7 +113,7 @@ fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap
 			ui.horizontal(|ui|
 			{
 				if ui.button("Del").clicked() {*to_remove = Some(i)};
-				ui.heading(common_name.unwrap_or(unique_name));
+				ui.heading(common_name.unwrap_or_else(||unique_name.into()).as_str());
 			});
 			ui.horizontal(|ui|
 			{
@@ -129,25 +130,25 @@ fn recipe_group(
 	ui: &mut Ui,
 	recipe: &crate::Recipe,
 	components: &[crate::Component],
-	owned_components: &mut HashMap<String, u32>) -> egui::InnerResponse<()>
+	owned_components: &mut HashMap<UniqueName, u32>) -> egui::InnerResponse<()>
 {
 	ui.vertical(|ui|
 	{
-		let recipe_unique_name = recipe.unique_name.as_str();
-		let recipe_common_name = recipe.common_name.as_deref();
+		let recipe_unique_name = recipe.unique_name.clone();
+		let recipe_common_name = recipe.common_name.clone();
 		component_group(
 			ui,
 			recipe_unique_name,
 			recipe_common_name,
 			owned_components,
-			1,
+			1.into(),
 			&recipe.active_relics,
 			&recipe.resurgence_relics);
 		for component in components
 		{
-			let component_unique_name = &component.unique_name;
-			let component_common_name = component.common_name.as_deref();
-			let required = component.count;
+			let component_unique_name = component.unique_name.clone();
+			let component_common_name = component.common_name.clone();
+			let required = component.count.clone();
 			let active_relics = component.recipe.as_ref()
 				.map(|r|&r.active_relics)
 				.unwrap_or(&component.active_relics);
@@ -168,10 +169,10 @@ fn recipe_group(
 
 fn component_group(
 	ui: &mut Ui,
-	unique_name: &str,
-	common_name: Option<&str>,
-	owned_components: &mut HashMap<String, u32>,
-	required: u32,
+	unique_name: UniqueName,
+	common_name: Option<CommonName>,
+	owned_components: &mut HashMap<UniqueName, u32>,
+	required: Count,
 	active_relics: &[Relic],
 	resurgence_relics: &[Relic]) -> egui::InnerResponse<()>
 {
@@ -180,14 +181,14 @@ fn component_group(
 	{
 		ui.horizontal(|ui|
 		{
-			let owned = match owned_components.get_mut(unique_name)
+			let owned = match owned_components.get_mut(&unique_name)
 			{
 				Some(v)=>v,
 				None=>owned_components
 						.entry(unique_name.to_owned())
 						.or_insert(0)
 			};
-			fullfilled = *owned>=required;
+			fullfilled = *owned>=required.to_u32();
 
 			let color = if fullfilled {
 				Color32::BLACK
@@ -205,9 +206,9 @@ fn component_group(
 				*owned += 1;
 			}
 
-			let name = common_name.unwrap_or(unique_name);
+			let name = common_name.unwrap_or_else(||unique_name.into());
 			ui.colored_label(color, format!("{} of {}", owned, required));
-			ui.colored_label(color, name);
+			ui.colored_label(color, name.as_str());
 			
 		});
 		if !active_relics.is_empty() && !fullfilled
