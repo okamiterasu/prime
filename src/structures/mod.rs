@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result, Context};
 
+mod invasions;
 mod items;
 mod types;
 mod recipes;
@@ -15,6 +16,7 @@ mod resurgence_relics;
 use active_relics::ActiveRelics;
 use crate::cache;
 use items::Items;
+use invasions::Invasions;
 use recipes::Recipes;
 use relics::Relics;
 use requires::Requires;
@@ -23,10 +25,12 @@ use resources::Resources;
 use resurgence_relics::ResurgenceRelics;
 pub use types::{UniqueName, Count, CommonName};
 
+
 #[derive(Debug)]
 pub struct Data
 {
 	active_relics: ActiveRelics,
+	invasions: Invasions,
 	items: Items,
 	recipes: Recipes,
 	relics: Relics,
@@ -111,6 +115,12 @@ impl Data
 			resources.add(resource.unique_name, resource.name);
 		}
 
+		let mut invasions = Invasions::default();
+		for invasion in cache::invasions(&cache_dir.join("worldstate.json"))?
+		{
+			invasions.add(invasion.into());
+		}
+
 		Ok(Self
 		{
 			recipes,
@@ -118,6 +128,7 @@ impl Data
 			requires,
 			resources,
 			items,
+			invasions,
 			active_relics,
 			resurgence_relics,
 			relic_rewards,
@@ -261,4 +272,10 @@ impl Data
 	{
 		Ok(self.recipes(result_type)?.pop())
 	}
+
+	pub fn available_from_invasion(&self, unique_name: impl Into<UniqueName>) -> bool
+	{
+		self.invasions.drops_from_invasion(unique_name.into())
+	}
+
 }

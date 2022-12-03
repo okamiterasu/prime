@@ -87,7 +87,8 @@ struct Recipe
 	common_name: Option<CommonName>,
 	unique_name: UniqueName,
 	active_relics: Vec<Relic>,
-	resurgence_relics: Vec<Relic>
+	resurgence_relics: Vec<Relic>,
+	available_from_invasion: bool
 }
 
 impl Recipe
@@ -100,7 +101,15 @@ impl Recipe
 			.context("querying active relics")?;
 		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
 			.context("querying resurgence relics")?;
-		Ok(Self{common_name, unique_name, active_relics, resurgence_relics})
+		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
+		Ok(Self
+		{
+			common_name,
+			unique_name,
+			active_relics,
+			resurgence_relics,
+			available_from_invasion
+		})
 	}
 
 	fn with_common_name(db: &mut Data, unique_name: UniqueName, common_name: Option<CommonName>) -> Result<Self>
@@ -109,12 +118,14 @@ impl Recipe
 			.context("Looking for active relics that reward recipe")?;
 		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
 			.context("Looking for resurgence relics that reward recipe")?;
+		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
 		Ok(Self
 		{
 			common_name,
 			unique_name,
 			active_relics,
-			resurgence_relics
+			resurgence_relics,
+			available_from_invasion
 		})
 	}
 }
@@ -127,6 +138,7 @@ struct Component
 	count: Count,
 	active_relics: Vec<Relic>,
 	resurgence_relics: Vec<Relic>,
+	available_from_invasion: bool,
 	recipe: Option<Recipe>
 }
 
@@ -153,8 +165,10 @@ impl Component
 			.context("querying recipe")?
 			.map(|r|Recipe::new(db, r))
 			.transpose()?;
+		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
 		Ok(Self
 		{
+			available_from_invasion,
 			unique_name,
 			common_name,
 			count,

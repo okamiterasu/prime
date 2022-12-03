@@ -1,4 +1,7 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
+
 use anyhow::Result;
 use serde::Deserialize;
 
@@ -6,7 +9,81 @@ use serde::Deserialize;
 #[serde(rename_all = "PascalCase")]
 struct State
 {
+	invasions: Vec<Invastion>,
 	prime_vault_traders: Vec<PrimeVaultTrader>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct Invastion
+{
+	faction: InvasionFaction,
+	attacker_reward: RewardOrEmptyVec,
+	defender_reward: RewardOrEmptyVec
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum RewardOrEmptyVec
+{
+	Reward(Reward),
+	EmptyVec(Vec<()>)
+}
+
+impl RewardOrEmptyVec
+{
+	fn to_reward(self) -> Reward
+	{
+		match self
+		{
+			Self::Reward(r)=>r,
+			Self::EmptyVec(_)=>Reward::default()
+		}
+	}
+}
+
+#[derive(Deserialize, Debug)]
+enum InvasionFaction
+{
+	#[serde(rename = "FC_GRINEER")]
+	Grineer,
+	#[serde(rename = "FC_CORPUS")]
+	Corpus,
+	#[serde(rename = "FC_INFESTATION")]
+	Infested
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+struct Reward
+{
+	counted_items: Vec<CountedItem>
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct CountedItem
+{
+	item_type: String,
+	item_count: usize
+}
+
+pub fn invasions(file_path: &Path) -> Result<Vec<String>>
+{
+	if !file_path.exists()
+	{
+		let worldstate = crate::live::worldstate()?;
+		std::fs::write(file_path, &worldstate)?;
+	}
+
+	let reader = BufReader::new(File::open(file_path)?);
+	let world_state: State = serde_json::from_reader(reader)?;
+	let invasions = world_state.invasions.into_iter();
+	let faction_rewards = invasions.flat_map(|i|
+		i.attacker_reward.to_reward().counted_items.into_iter()
+			.chain(i.defender_reward.to_reward().counted_items.into_iter()));
+	let rewards = faction_rewards.map(|i|i.item_type);
+	Ok(rewards.collect())
 }
 
 #[derive(Deserialize, Debug)]
@@ -25,9 +102,6 @@ pub struct Item
 
 pub fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 {
-	use std::fs::File;
-	use std::io::BufReader;
-
 	if !file_path.exists()
 	{
 		let worldstate = crate::live::worldstate()?;

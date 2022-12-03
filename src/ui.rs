@@ -143,7 +143,8 @@ fn recipe_group(
 			owned_components,
 			1.into(),
 			&recipe.active_relics,
-			&recipe.resurgence_relics);
+			&recipe.resurgence_relics,
+			recipe.available_from_invasion);
 		for component in components
 		{
 			let component_unique_name = component.unique_name.clone();
@@ -155,6 +156,7 @@ fn recipe_group(
 			let resurgence_relics = component.recipe.as_ref()
 				.map(|r|&r.resurgence_relics)
 				.unwrap_or(&component.resurgence_relics);
+			let available_from_invastion = component.available_from_invasion;
 			component_group(
 				ui,
 				component_unique_name,
@@ -162,7 +164,8 @@ fn recipe_group(
 				owned_components,
 				required,
 				active_relics,
-				resurgence_relics);
+				resurgence_relics,
+				available_from_invastion);
 		}
 	})
 }
@@ -174,7 +177,8 @@ fn component_group(
 	owned_components: &mut HashMap<UniqueName, u32>,
 	required: Count,
 	active_relics: &[Relic],
-	resurgence_relics: &[Relic]) -> egui::InnerResponse<()>
+	resurgence_relics: &[Relic],
+	available_from_invastion: bool) -> egui::InnerResponse<()>
 {
 	let mut fullfilled = false;
 	ui.vertical(|ui|
@@ -243,6 +247,10 @@ fn component_group(
 					ui.colored_label(color, &relic.name);
 				}
 			});
+		}
+		if available_from_invastion && !fullfilled
+		{
+			ui.label("Invastion");
 		}
 	})
 }
