@@ -32,7 +32,7 @@ enum RewardOrEmptyVec
 
 impl RewardOrEmptyVec
 {
-	fn to_reward(self) -> Reward
+	fn into_reward(self) -> Reward
 	{
 		match self
 		{
@@ -80,8 +80,8 @@ pub fn invasions(file_path: &Path) -> Result<Vec<String>>
 	let world_state: State = serde_json::from_reader(reader)?;
 	let invasions = world_state.invasions.into_iter();
 	let faction_rewards = invasions.flat_map(|i|
-		i.attacker_reward.to_reward().counted_items.into_iter()
-			.chain(i.defender_reward.to_reward().counted_items.into_iter()));
+		i.attacker_reward.into_reward().counted_items.into_iter()
+			.chain(i.defender_reward.into_reward().counted_items.into_iter()));
 	let rewards = faction_rewards.map(|i|i.item_type);
 	Ok(rewards.collect())
 }
