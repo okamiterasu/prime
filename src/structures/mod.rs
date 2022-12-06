@@ -222,7 +222,7 @@ impl Data
 		{
 			let relic_common_name = self.relics
 				.fetch_by_unique_name(relic_unique_name.as_str())?;
-			if self.resurgence_relics.is_active(relic_common_name.clone())
+			if self.resurgence_relics.is_active(relic_unique_name.clone())
 			{
 				let relic = crate::Relic::new(
 					relic_common_name.as_str(),
@@ -244,7 +244,7 @@ impl Data
 		{
 			let relic_common_name = self.relics
 				.fetch_by_unique_name(relic_unique_name.as_str())?;
-			if self.resurgence_relics.is_active(relic_common_name.clone())
+			if self.resurgence_relics.is_active(relic_unique_name.clone())
 			{
 				let relic = crate::Relic::new(
 					relic_common_name.as_str(),

@@ -1,22 +1,22 @@
 use std::collections::HashSet;
 
-use super::types::CommonName;
+use super::types::UniqueName;
 
 #[derive(Default, Debug)]
 pub struct ResurgenceRelics
 {
-	common_names: HashSet<CommonName>
+	unique_name: HashSet<UniqueName>
 }
 
 impl ResurgenceRelics
 {
-	pub fn is_active(&self, common_name: CommonName) -> bool
+	pub fn is_active(&self, unique_name: UniqueName) -> bool
 	{
-		self.common_names.contains(&common_name)
+		self.unique_name.contains(&unique_name)
 	}
 
-	pub fn add(&mut self, common_name: CommonName)
+	pub fn add(&mut self, unique_name: UniqueName)
 	{
-		self.common_names.insert(common_name);
+		self.unique_name.insert(unique_name);
 	}
 }
