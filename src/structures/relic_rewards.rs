@@ -41,9 +41,9 @@ impl RelicRewards
 
 	pub fn fetch_by_reward_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> Result<Vec<(UniqueName, RelicRewardRarity)>>
+		unique_name: UniqueName) -> Result<Vec<(UniqueName, RelicRewardRarity)>>
 	{
-		let un = unique_name.into();
+		let un = unique_name;
 		let indices = match self.reward_index.get(&un)
 		{
 			Some(i)=>i,

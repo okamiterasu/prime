@@ -168,7 +168,7 @@ impl Data
 	pub fn active_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name)?;
+			.fetch_by_reward_unique_name(component_unique_name.into())?;
 
 		let mut relics = Vec::with_capacity(relic_rewards.len());
 		for (relic_unique_name, reward_rarity) in relic_rewards
@@ -190,9 +190,7 @@ impl Data
 
 	pub fn active_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
-		let recipe = self.recipes.fetch_by_unique_name(recipe_unique_name)
-			.context("Looking for recipes by unique_name")?;
-		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe)
+		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe_unique_name.into())
 			.context("Looking for relic rewards needed by recipe")?;
 		let mut relics = Vec::with_capacity(relic_rewards.len());
 		for (relic_unique_name, reward_rarity) in relic_rewards
@@ -215,7 +213,7 @@ impl Data
 	pub fn resurgence_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name)?;
+			.fetch_by_reward_unique_name(component_unique_name.into())?;
 
 		let mut relics = Vec::with_capacity(relic_rewards.len());
 		for (relic_unique_name, reward_rarity) in relic_rewards
@@ -237,8 +235,7 @@ impl Data
 
 	pub fn resurgence_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Result<Vec<crate::Relic>>
 	{
-		let recipe = self.recipes.fetch_by_unique_name(recipe_unique_name)?;
-		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe)?;
+		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe_unique_name.into())?;
 		let mut relics = Vec::with_capacity(relic_rewards.len());
 		for (relic_unique_name, reward_rarity) in relic_rewards
 		{
