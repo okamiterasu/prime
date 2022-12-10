@@ -17,7 +17,7 @@ struct State
 #[serde(rename_all = "PascalCase")]
 struct Invastion
 {
-	faction: InvasionFaction,
+	_faction: InvasionFaction,
 	attacker_reward: RewardOrEmptyVec,
 	defender_reward: RewardOrEmptyVec
 }
@@ -65,7 +65,7 @@ struct Reward
 struct CountedItem
 {
 	item_type: String,
-	item_count: usize
+	_item_count: usize
 }
 
 pub fn invasions(file_path: &Path) -> Result<Vec<String>>

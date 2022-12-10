@@ -170,6 +170,7 @@ fn recipe_group(
 	})
 }
 
+#[allow(clippy::too_many_arguments)]
 fn component_group(
 	ui: &mut Ui,
 	unique_name: UniqueName,
