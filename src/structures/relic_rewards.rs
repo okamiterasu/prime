@@ -41,27 +41,19 @@ impl RelicRewards
 
 	pub fn fetch_by_reward_unique_name(
 		&self,
-		unique_name: UniqueName) -> Result<Vec<(UniqueName, RelicRewardRarity)>>
+		unique_name: UniqueName) -> Option<Vec<(UniqueName, RelicRewardRarity)>>
 	{
 		let un = unique_name;
-		let indices = match self.reward_index.get(&un)
-		{
-			Some(i)=>i,
-			None=>return Ok(vec![])
-		};
+		let indices = self.reward_index.get(&un)?;
 
 		let mut t = Vec::with_capacity(indices.len());
 		for index in indices
 		{
-			let relic_unique_name = self.relics.get(*index)
-				.ok_or_else(||anyhow!("Recipe does not exist"))?
-				.clone();
-			let reward_rarity = self.rarities.get(*index)
-				.ok_or_else(||anyhow!("Relic reward does not exist"))?
-				.clone();
+			let relic_unique_name = self.relics.get(*index).cloned()?;
+			let reward_rarity = self.rarities.get(*index).cloned()?;
 			t.push((relic_unique_name, reward_rarity))
 		}
-		Ok(t)
+		Some(t)
 	}
 
 	pub fn add(

@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
-
 use super::types::{Count, UniqueName};
 
 #[derive(Default, Debug)]
@@ -16,38 +14,29 @@ pub struct Requires
 
 impl Requires
 {
-	pub fn fetch_by_recipe_unique_name(&self, recipe_unique_name: UniqueName) -> Result<Vec<(UniqueName, Count)>>
+	pub fn fetch_by_recipe_unique_name(
+		&self,
+		recipe_unique_name: UniqueName) -> Option<Vec<(UniqueName, Count)>>
 	{
-		let indexes = self.recipe_unique_name_index.get(&recipe_unique_name)
-			.ok_or_else(||anyhow!("Value does not exist in unique_name index"))?;
-
+		let indexes = self.recipe_unique_name_index.get(&recipe_unique_name)?;
 		let mut rows = Vec::with_capacity(indexes.len());
-		for index in indexes
+		for index in indexes.iter().cloned()
 		{
-			let unique_name = self.item_types.get(*index)
-				.ok_or_else(||anyhow!("Value does not exist"))?
-				.clone();
-			let count = self.count.get(*index)
-				.ok_or_else(||anyhow!("Value does not exist"))?
-				.clone();
+			let unique_name = self.item_types.get(index).cloned()?;
+			let count = self.count.get(index).cloned()?;
 			rows.push((unique_name, count));
 		}
-		Ok(rows)
+		Some(rows)
 	}
 
 	pub fn _fetch_by_item_type(
 		&self,
-		item_type: impl Into<UniqueName>) -> Result<(UniqueName, Count)>
+		item_type: UniqueName) -> Option<(UniqueName, Count)>
 	{
-		let index = *self.item_type_index.get(&item_type.into())
-			.ok_or_else(||anyhow!("Value does not exist in unique_name index"))?;
-		let recipe_unique_name = self.recipe_unique_names.get(index)
-			.ok_or_else(||anyhow!("Value does not exist"))?
-			.clone();
-		let count = self.count.get(index)
-			.ok_or_else(||anyhow!("Value does not exist"))?
-			.clone();
-		Ok((recipe_unique_name, count))
+		let index = *self.item_type_index.get(&item_type)?;
+		let recipe_unique_name = self.recipe_unique_names.get(index).cloned()?;
+		let count = self.count.get(index).cloned()?;
+		Some((recipe_unique_name, count))
 	}
 
 	pub fn add(

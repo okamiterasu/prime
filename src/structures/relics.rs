@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
-
 use super::types::{UniqueName, CommonName};
 
 #[derive(Default, Debug)]
@@ -17,24 +15,18 @@ impl Relics
 {
 	pub fn fetch_by_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> Result<CommonName>
+		unique_name: UniqueName) -> Option<CommonName>
 	{
-		let index = *self.unique_name_index.get(&unique_name.into())
-			.ok_or_else(||anyhow!("Recipe does not exist in unique_names"))?;
-		self.common_names.get(index)
-			.ok_or_else(||anyhow!("Recipe does not exist"))
-			.map(|cn|cn.clone())
+		let index = *self.unique_name_index.get(&unique_name)?;
+		self.common_names.get(index).cloned()
 	}
 
 	pub fn _fetch_by_common_name(
 		&self,
-		common_name: impl Into<CommonName>) -> Result<UniqueName>
+		common_name: CommonName) -> Option<UniqueName>
 	{
-		let index = *self.common_name_index.get(&common_name.into())
-			.ok_or_else(||anyhow!("Recipe does not exist in unique_names"))?;
-		self.unique_names.get(index)
-			.ok_or_else(||anyhow!("Recipe does not exist"))
-			.map(|cn|cn.clone())
+		let index = *self.common_name_index.get(&common_name)?;
+		self.unique_names.get(index).cloned()
 	}
 
 	pub fn add(

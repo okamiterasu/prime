@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
-
 use super::types::UniqueName;
 
 #[derive(Default, Debug)]
@@ -15,37 +13,28 @@ pub struct Recipes
 
 impl Recipes
 {
-	pub fn fetch_by_unique_name(
+	pub fn _fetch_by_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> Result<UniqueName>
+		unique_name: impl Into<UniqueName>) -> Option<UniqueName>
 	{
-		let i = *self.unique_name_index.get(&unique_name.into())
-			.ok_or_else(||anyhow!("Recipe does not exist in unique_names"))?;
-		self.result_types.get(i)
-			.cloned()
-			.ok_or_else(||anyhow!("Recipe does not exist"))
+		let i = *self.unique_name_index.get(&unique_name.into())?;
+		self.result_types.get(i).cloned()
 	}
 
 	pub fn fetch_by_result_type(
 		&self,
-		result_type: impl Into<UniqueName>) -> Result<Vec<UniqueName>>
+		result_type: impl Into<UniqueName>) -> Option<Vec<UniqueName>>
 	{
 		let result_type = result_type.into();
-		let indices = match self.result_type_index.get(&result_type)
-		{
-			Some(i)=>i,
-			None=>return Ok(vec![])
-		};
+		let indices = self.result_type_index.get(&result_type)?;
 		let mut results = Vec::with_capacity(indices.len());
 		for index in indices
 		{
-			let unique_name = self.unique_names.get(*index)
-				.ok_or_else(||anyhow!("Recipe does not exist"))
-				.cloned()?;
+			let unique_name = self.unique_names.get(*index).cloned()?;
 			results.push(unique_name);
 
 		}
-		Ok(results)
+		Some(results)
 	}
 
 	pub fn add(
@@ -82,14 +71,14 @@ mod tests
 		fn get_nonexistent_name()
 		{
 			let r = Recipes::default();
-			assert!(r.fetch_by_unique_name("foo").is_err());
+			assert!(r._fetch_by_unique_name("foo").is_none());
 		}
 
 		#[test]
 		fn get_nonexistent_result()
 		{
 			let r = Recipes::default();
-			assert!(r.fetch_by_result_type("foo").is_err());
+			assert!(r.fetch_by_result_type("foo").is_none());
 		}
 	}
 
@@ -108,7 +97,7 @@ mod tests
 		{
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
-			assert!(r.fetch_by_unique_name("baz").is_err());
+			assert!(r._fetch_by_unique_name("baz").is_none());
 		}
 
 		#[test]
@@ -116,7 +105,7 @@ mod tests
 		{
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
-			assert!(r.fetch_by_result_type("quix").is_err());
+			assert!(r.fetch_by_result_type("quix").is_none());
 		}
 
 		#[test]
@@ -125,7 +114,7 @@ mod tests
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
 			let bar: UniqueName = "bar".into();
-			let res = r.fetch_by_unique_name("foo").unwrap();
+			let res = r._fetch_by_unique_name("foo").unwrap();
 			assert_eq!(res, bar);
 		}
 
@@ -157,7 +146,7 @@ mod tests
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
 			r.add("baz", "quix");
-			assert!(r.fetch_by_result_type("baz").is_err());
+			assert!(r.fetch_by_result_type("baz").is_none());
 		}
 
 		#[test]
@@ -166,7 +155,7 @@ mod tests
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
 			r.add("baz", "quix");
-			assert!(r.fetch_by_unique_name("quix").is_err());
+			assert!(r._fetch_by_unique_name("quix").is_none());
 		}
 
 		#[test]
@@ -187,7 +176,7 @@ mod tests
 			r.add("foo", "bar");
 			r.add("baz", "quix");
 			let bar: UniqueName = "bar".into();
-			let res = r.fetch_by_unique_name("foo").unwrap();
+			let res = r._fetch_by_unique_name("foo").unwrap();
 			assert_eq!(res, bar);
 		}
 
@@ -209,7 +198,7 @@ mod tests
 			r.add("foo", "bar");
 			r.add("baz", "quix");
 			let quix: UniqueName = "quix".into();
-			let res = r.fetch_by_unique_name("baz").unwrap();
+			let res = r._fetch_by_unique_name("baz").unwrap();
 			assert_eq!(res, quix);
 		}
 	}

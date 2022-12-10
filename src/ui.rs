@@ -88,7 +88,7 @@ fn header(
 		ui.text_edit_singleline(add_search);
 		if ui.button("Add").clicked()
 		{
-			if let Ok(unique_name) = db.item_unique_name(add_search.as_str())
+			if let Some(unique_name) = db.item_unique_name(add_search.as_str())
 			{
 				if let Ok(t) = Tracked::new(db, unique_name)
 				{

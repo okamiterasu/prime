@@ -95,12 +95,11 @@ impl Recipe
 {
 	fn new(db: &mut Data, unique_name: UniqueName) -> Result<Self>
 	{
-		let common_name = db.resource_common_name(unique_name.as_str())
-			.context("querying common name")?;
+		let common_name = db.resource_common_name(unique_name.as_str());
 		let active_relics = db.active_recipe_relics(unique_name.as_str())
-			.context("querying active relics")?;
+			.unwrap_or_default();
 		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
-			.context("querying resurgence relics")?;
+			.unwrap_or_default();
 		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
 		Ok(Self
 		{
@@ -115,9 +114,9 @@ impl Recipe
 	fn with_common_name(db: &mut Data, unique_name: UniqueName, common_name: Option<CommonName>) -> Result<Self>
 	{
 		let active_relics = db.active_recipe_relics(unique_name.as_str())
-			.context("Looking for active relics that reward recipe")?;
+			.unwrap_or_default();
 		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
-			.context("Looking for resurgence relics that reward recipe")?;
+			.unwrap_or_default();
 		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
 		Ok(Self
 		{
@@ -147,22 +146,20 @@ impl Component
 	pub(crate) fn new(db: &mut Data, unique_name: UniqueName, recipe_unique_name: UniqueName) -> Result<Self>
 	{
 		let common_name = match db.resource_common_name(unique_name.as_str())
-			.context("querying common name")?
 		{
 			Some(cn)=>Some(cn),
 			None=>
 			{
-				db.item_common_name(unique_name.as_str())?
+				db.item_common_name(unique_name.as_str())
 			}
 		};
 		let count = db.how_many_needed(recipe_unique_name, unique_name.as_str())
-			.context("querying required count")?;
+			.unwrap_or_default();
 		let active_relics = db.active_component_relics(unique_name.clone())
-			.context("querying active relics")?;
+			.unwrap_or_default();
 		let resurgence_relics = db.resurgence_component_relics(unique_name.clone())
-			.context("querying resurgence relics")?;
+			.unwrap_or_default();
 		let recipe = db.recipe(unique_name.as_str())
-			.context("querying recipe")?
 			.map(|r|Recipe::new(db, r))
 			.transpose()?;
 		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
@@ -192,8 +189,7 @@ impl Tracked
 	fn new(db: &mut Data, unique_name: impl Into<UniqueName>) -> Result<Self>
 	{
 		let unique_name = unique_name.into();
-		let common_name = db.item_common_name(unique_name.clone())
-			.context("Querying for common name")?;
+		let common_name = db.item_common_name(unique_name.clone());
 		let recipe_unique_names = db.recipes(unique_name.clone())
 			.context("Querying for recipe unique name")?;
 		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}

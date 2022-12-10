@@ -115,7 +115,7 @@ impl From<UniqueName> for CommonName
 	}
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Count(pub u32);
 
 impl Count
