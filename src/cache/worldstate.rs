@@ -73,7 +73,7 @@ pub fn invasions(file_path: &Path) -> Result<Vec<String>>
 	if !file_path.exists()
 	{
 		let worldstate = crate::live::worldstate()?;
-		std::fs::write(file_path, &worldstate)?;
+		std::fs::write(file_path, worldstate)?;
 	}
 
 	let reader = BufReader::new(File::open(file_path)?);
@@ -105,7 +105,7 @@ pub fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 	if !file_path.exists()
 	{
 		let worldstate = crate::live::worldstate()?;
-		std::fs::write(file_path, &worldstate)?;
+		std::fs::write(file_path, worldstate)?;
 	}
 
 	let reader = BufReader::new(File::open(file_path)?);

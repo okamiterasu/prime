@@ -221,7 +221,7 @@ fn main() -> Result<()>
 	if let Some((index, index_raw)) = check_for_manifest_updates(&cache_dir)
 		.context("Checking for manifest updates")?
 	{
-		std::fs::write(cache_dir.join("index_en.txt"), &index_raw)?;
+		std::fs::write(cache_dir.join("index_en.txt"), index_raw)?;
 		update_manifests(&cache_dir, &index)
 			.context("Updating manifests")?;
 		remove_old_manifests(&cache_dir, &index)
@@ -230,11 +230,11 @@ fn main() -> Result<()>
 	// Worldstate has probably changed too, so update that as well.
 	let dt = live::droptable()
 		.context("Downloading scrape droptable")?;
-	std::fs::write(cache_dir.join("droptable.html"), &dt)?;
+	std::fs::write(cache_dir.join("droptable.html"), dt)?;
 
 	let ws = live::worldstate()
 		.context("Downloading world state")?;
-	std::fs::write(cache_dir.join("worldstate.json"), &ws)?;
+	std::fs::write(cache_dir.join("worldstate.json"), ws)?;
 
 	let mut data = Data::from_cache(&cache_dir)?;
 

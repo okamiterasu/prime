@@ -17,7 +17,7 @@ pub fn active_relics(file_path: &Path) -> Result<Vec<String>>
 	if !file_path.exists()
 	{
 		let table = crate::live::droptable()?;
-		std::fs::write(file_path, &table)?;
+		std::fs::write(file_path, table)?;
 	}
 	let contents = std::fs::read_to_string(file_path)?;
 	let parsed = Html::parse_document(&contents);
