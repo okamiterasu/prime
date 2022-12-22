@@ -17,7 +17,7 @@ impl Recipes
 		&self,
 		unique_name: impl Into<UniqueName>) -> Option<UniqueName>
 	{
-		let i = *self.unique_name_index.get(&unique_name.into())?;
+		let &i = self.unique_name_index.get(&unique_name.into())?;
 		self.result_types.get(i).cloned()
 	}
 

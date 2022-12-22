@@ -33,7 +33,7 @@ impl Requires
 		&self,
 		item_type: UniqueName) -> Option<(UniqueName, Count)>
 	{
-		let index = *self.item_type_index.get(&item_type)?;
+		let &index = self.item_type_index.get(&item_type)?;
 		let recipe_unique_name = self.recipe_unique_names.get(index).cloned()?;
 		let count = self.count.get(index).cloned()?;
 		Some((recipe_unique_name, count))

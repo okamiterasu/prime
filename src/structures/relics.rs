@@ -17,7 +17,7 @@ impl Relics
 		&self,
 		unique_name: UniqueName) -> Option<CommonName>
 	{
-		let index = *self.unique_name_index.get(&unique_name)?;
+		let &index = self.unique_name_index.get(&unique_name)?;
 		self.common_names.get(index).cloned()
 	}
 
@@ -25,7 +25,7 @@ impl Relics
 		&self,
 		common_name: CommonName) -> Option<UniqueName>
 	{
-		let index = *self.common_name_index.get(&common_name)?;
+		let &index = self.common_name_index.get(&common_name)?;
 		self.unique_names.get(index).cloned()
 	}
 

@@ -47,10 +47,10 @@ impl RelicRewards
 		let indices = self.reward_index.get(&un)?;
 
 		let mut t = Vec::with_capacity(indices.len());
-		for index in indices
+		for &index in indices
 		{
-			let relic_unique_name = self.relics.get(*index).cloned()?;
-			let reward_rarity = self.rarities.get(*index).cloned()?;
+			let relic_unique_name = self.relics.get(index).cloned()?;
+			let reward_rarity = self.rarities.get(index).cloned()?;
 			t.push((relic_unique_name, reward_rarity))
 		}
 		Some(t)

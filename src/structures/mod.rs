@@ -90,7 +90,7 @@ impl Data
 			{
 				let reward_unique_name = reward.reward_name
 					.split('/')
-					.filter(|s|*s != "StoreItems")
+					.filter(|&s|s != "StoreItems")
 					.fold(String::new(), |a, b|a+b+"/");
 				let reward_unique_name = reward_unique_name
 					.strip_suffix('/')

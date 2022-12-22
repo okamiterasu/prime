@@ -118,7 +118,7 @@ pub fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 	// needs to be removed to make it line up with the rest of the names.
 	// TODO: I feel like there should be a better way to do this.
 	let normalized_store_items = store_items
-		.map(|i|i.split('/').filter(|s|*s != "StoreItems").collect());
+		.map(|i|i.split('/').filter(|&s|s != "StoreItems").collect());
 	let relics = normalized_store_items
 		.map(|i: Vec<_>|i.join("/"))
 		.collect();
