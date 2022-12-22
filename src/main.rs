@@ -1,12 +1,18 @@
 use std::{path::{PathBuf, Path}, collections::HashMap};
+
 use anyhow::{Result, Error, anyhow, bail, Context};
 use eframe::egui;
+
 use structures::{Data, CommonName, UniqueName, Count};
+use crate::recipe::Recipe;
+use crate::requirement::Requirement;
 
 mod live;
 mod ui;
 mod cache;
 mod structures;
+mod requirement;
+mod recipe;
 
 #[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
@@ -82,131 +88,37 @@ impl Relic
 }
 
 #[derive(Debug)]
-struct Recipe
-{
-	common_name: Option<CommonName>,
-	unique_name: UniqueName,
-	active_relics: Vec<Relic>,
-	resurgence_relics: Vec<Relic>,
-	available_from_invasion: bool
-}
-
-impl Recipe
-{
-	fn new(db: &mut Data, unique_name: UniqueName) -> Result<Self>
-	{
-		let common_name = db.resource_common_name(unique_name.as_str());
-		let active_relics = db.active_recipe_relics(unique_name.as_str())
-			.unwrap_or_default();
-		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
-			.unwrap_or_default();
-		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
-		Ok(Self
-		{
-			common_name,
-			unique_name,
-			active_relics,
-			resurgence_relics,
-			available_from_invasion
-		})
-	}
-
-	fn with_common_name(db: &mut Data, unique_name: UniqueName, common_name: Option<CommonName>) -> Result<Self>
-	{
-		let active_relics = db.active_recipe_relics(unique_name.as_str())
-			.unwrap_or_default();
-		let resurgence_relics = db.resurgence_recipe_relics(unique_name.as_str())
-			.unwrap_or_default();
-		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
-		Ok(Self
-		{
-			common_name,
-			unique_name,
-			active_relics,
-			resurgence_relics,
-			available_from_invasion
-		})
-	}
-}
-
-#[derive(Debug)]
-struct Component
-{
-	unique_name: UniqueName,
-	common_name: Option<CommonName>,
-	count: Count,
-	active_relics: Vec<Relic>,
-	resurgence_relics: Vec<Relic>,
-	available_from_invasion: bool,
-	recipe: Option<Recipe>
-}
-
-impl Component
-{
-	pub(crate) fn new(db: &mut Data, unique_name: UniqueName, recipe_unique_name: UniqueName) -> Result<Self>
-	{
-		let common_name = match db.resource_common_name(unique_name.as_str())
-		{
-			Some(cn)=>Some(cn),
-			None=>
-			{
-				db.item_common_name(unique_name.as_str())
-			}
-		};
-		let count = db.how_many_needed(recipe_unique_name, unique_name.as_str())
-			.unwrap_or_default();
-		let active_relics = db.active_component_relics(unique_name.clone())
-			.unwrap_or_default();
-		let resurgence_relics = db.resurgence_component_relics(unique_name.clone())
-			.unwrap_or_default();
-		let recipe = db.recipe(unique_name.as_str())
-			.map(|r|Recipe::new(db, r))
-			.transpose()?;
-		let available_from_invasion = db.available_from_invasion(unique_name.as_str());
-		Ok(Self
-		{
-			available_from_invasion,
-			unique_name,
-			common_name,
-			count,
-			active_relics,
-			resurgence_relics,
-			recipe
-		})
-	}
-}
-
-#[derive(Debug)]
 pub(crate) struct Tracked
 {
-	pub(crate) common_name: Option<CommonName>,
+	pub(crate) common_name: CommonName,
 	pub(crate) unique_name: UniqueName,
-	pub(crate) recipes: Vec<(Recipe, Vec<Component>)>
+	pub(crate) recipes: Vec<(Recipe, Vec<(Requirement, Count)>)>
 }
 
 impl Tracked
 {
-	fn new(db: &mut Data, unique_name: impl Into<UniqueName>) -> Result<Self>
+	fn new(db: &Data, unique_name: impl Into<UniqueName>) -> Result<Self>
 	{
 		let unique_name = unique_name.into();
-		let common_name = db.item_common_name(unique_name.clone());
+		let common_name = db.resource_common_name(unique_name.clone())
+			.context("searching for resource common name")?;
+
 		let recipe_unique_names = db.recipes(unique_name.clone())
-			.context("Querying for recipe unique name")?;
+			.context("Searching for resource's recipe")?;
 		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}
+
 		let mut recipes = Vec::with_capacity(recipe_unique_names.len());
-		for unique_name in recipe_unique_names
+		for recipe_unique_name in recipe_unique_names
 		{
-			let common_name = common_name.as_ref()
-				.map(|c|format!("{} Blueprint", c))
-				.map(CommonName::from);
-			let recipe = Recipe::with_common_name(db, unique_name.clone(), common_name.clone())
-				.with_context(||format!("Creating recipe from {unique_name} and {common_name:?}"))?;
-			let components = db.requirements(unique_name.as_str())
-				.with_context(||format!("Finding requirements for recipe {unique_name}"))?
-				.into_iter()
-				.map(|c|Component::new(db, c.0.clone(), recipe.unique_name.clone())
-					.with_context(||format!("Generating component data for {c:?}")))
-				.collect::<Result<_>>()?;
+			let recipe = Recipe::new(db, recipe_unique_name.clone())?;
+			let mut components = vec![];
+			for (unique_name, count) in db.requirements(recipe_unique_name.clone())
+				.context("Looking for recipe's requirements")?
+			{
+				let requirement = Requirement::new(unique_name.clone(), db)
+					.with_context(||format!("Generating component data for {:?}", unique_name))?;
+				components.push((requirement, count));
+			}
 			recipes.push((recipe, components));
 		}
 		Ok(Self{common_name, unique_name, recipes})

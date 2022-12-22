@@ -3,7 +3,6 @@ use std::path::Path;
 use anyhow::Result;
 
 mod invasions;
-mod items;
 mod types;
 mod recipes;
 mod requires;
@@ -15,7 +14,6 @@ mod resurgence_relics;
 
 use active_relics::ActiveRelics;
 use crate::cache;
-use items::Items;
 use invasions::Invasions;
 use recipes::Recipes;
 use relics::Relics;
@@ -31,7 +29,6 @@ pub struct Data
 {
 	active_relics: ActiveRelics,
 	invasions: Invasions,
-	items: Items,
 	recipes: Recipes,
 	relics: Relics,
 	relic_rewards: RelicRewards,
@@ -46,20 +43,25 @@ impl Data
 	{
 		let index = cache::load_index(&cache_dir.join("index_en.txt"))?;
 
-		let mut items = Items::default();
+		let mut resources = Resources::default();
+		for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])?
+		{
+			resources.add(resource.unique_name, resource.name);
+		}
+
 		for warframe in cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])?
 		{
 			let unique_name = warframe.unique_name.as_ref();
 			let common_name = warframe.name.strip_prefix("<ARCHWING> ")
 				.unwrap_or(&warframe.name);
-			items.add(unique_name, common_name);
+			resources.add(unique_name, common_name);
 		}
 
 		for weapon in cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])?
 		{
 			let unique_name = weapon.unique_name.as_ref();
 			let common_name = weapon.name.as_ref();
-			items.add(unique_name, common_name);
+			resources.add(unique_name, common_name);
 		}
 
 		let mut requires = Requires::default();
@@ -109,12 +111,6 @@ impl Data
 			resurgence_relics.add(resurgence_relic.into());
 		}
 
-		let mut resources = Resources::default();
-		for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])?
-		{
-			resources.add(resource.unique_name, resource.name);
-		}
-
 		let mut invasions = Invasions::default();
 		for invasion in cache::invasions(&cache_dir.join("worldstate.json"))?
 		{
@@ -127,7 +123,6 @@ impl Data
 			relics,
 			requires,
 			resources,
-			items,
 			invasions,
 			active_relics,
 			resurgence_relics,
@@ -140,22 +135,17 @@ impl Data
 		self.requires.fetch_by_recipe_unique_name(recipe_unique_name.into())
 	}
 
-	pub fn item_common_name(&self, unique_name: impl Into<UniqueName>) -> Option<CommonName>
-	{
-		self.items.fetch_by_unique_name(unique_name.into())
-	}
-
-	pub fn item_unique_name(&self, common_name: impl Into<CommonName>) -> Option<UniqueName>
-	{
-		self.items.fetch_by_common_name(common_name.into())
-	}
-
 	pub fn resource_common_name(&self, unique_name: impl Into<UniqueName>) -> Option<CommonName>
 	{
 		self.resources.fetch_by_unique_name(unique_name.into())
 	}
 
-	pub fn how_many_needed(&self, recipe_unique_name: impl Into<UniqueName>, resource_unique_name: impl Into<UniqueName>) -> Option<Count>
+	pub fn resource_unique_name(&self, common_name: impl Into<CommonName>) -> Option<UniqueName>
+	{
+		self.resources.fetch_by_common_name(common_name.into())
+	}
+
+	pub fn _how_many_needed(&self, recipe_unique_name: impl Into<UniqueName>, resource_unique_name: impl Into<UniqueName>) -> Option<Count>
 	{
 		let rec = recipe_unique_name.into();
 		let res = resource_unique_name.into();
@@ -164,7 +154,7 @@ impl Data
 		Some(count)
 	}
 
-	pub fn active_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
+	pub fn active_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name.into())?;
@@ -187,53 +177,11 @@ impl Data
 		Some(relics)
 	}
 
-	pub fn active_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
-	{
-		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe_unique_name.into())?;
-		let mut relics = Vec::with_capacity(relic_rewards.len());
-		for (relic_unique_name, reward_rarity) in relic_rewards
-		{
-			let relic_common_name = self.relics
-				.fetch_by_unique_name(relic_unique_name)?;
-			if self.active_relics.is_active(relic_common_name.clone())
-			{
-				let relic = crate::Relic::new(
-					relic_common_name.as_str(),
-					reward_rarity.as_str()).ok()?;
-				relics.push(relic);
-			}
-		}
-		relics.sort();
-		relics.dedup();
-		Some(relics)
-	}
-
-	pub fn resurgence_component_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
+	pub fn resurgence_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name.into())?;
 
-		let mut relics = Vec::with_capacity(relic_rewards.len());
-		for (relic_unique_name, reward_rarity) in relic_rewards
-		{
-			let relic_common_name = self.relics
-				.fetch_by_unique_name(relic_unique_name.clone())?;
-			if self.resurgence_relics.is_active(relic_unique_name.clone())
-			{
-				let relic = crate::Relic::new(
-					relic_common_name.as_str(),
-					reward_rarity.as_str()).ok()?;
-				relics.push(relic);
-			}
-		}
-		relics.sort();
-		relics.dedup();
-		Some(relics)
-	}
-
-	pub fn resurgence_recipe_relics(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
-	{
-		let relic_rewards = self.relic_rewards.fetch_by_reward_unique_name(recipe_unique_name.into())?;
 		let mut relics = Vec::with_capacity(relic_rewards.len());
 		for (relic_unique_name, reward_rarity) in relic_rewards
 		{
@@ -266,6 +214,11 @@ impl Data
 	pub fn recipe(&self, result_type: impl Into<UniqueName>) -> Option<UniqueName>
 	{
 		self.recipes(result_type)?.pop()
+	}
+
+	pub fn recipe_result(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<UniqueName>
+	{
+		self.recipes.fetch_by_unique_name(recipe_unique_name)
 	}
 
 	pub fn available_from_invasion(&self, unique_name: impl Into<UniqueName>) -> bool

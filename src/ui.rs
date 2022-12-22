@@ -58,7 +58,7 @@ impl eframe::App for App
 		ctx.set_visuals(egui::style::Visuals::dark());
 		egui::CentralPanel::default().show(ctx, |ui|
 		{
-			header(ui, &mut self.add_search, &mut self.db, &mut self.tracked);
+			header(ui, &mut self.add_search, &self.db, &mut self.tracked);
 			egui::Grid::new("").show(ui, |ui|
 			{
 				for (i, tracked) in self.tracked.iter().enumerate()
@@ -78,7 +78,7 @@ impl eframe::App for App
 fn header(
 	ui: &mut Ui,
 	add_search: &mut String,
-	db: &mut Data,
+	db: &Data,
 	tracked: &mut Vec<Tracked>) -> egui::InnerResponse<()>
 {
 	ui.heading("Recipe Tracker");
@@ -88,7 +88,7 @@ fn header(
 		ui.text_edit_singleline(add_search);
 		if ui.button("Add").clicked()
 		{
-			if let Some(unique_name) = db.item_unique_name(add_search.as_str())
+			if let Some(unique_name) = db.resource_unique_name(add_search.as_str())
 			{
 				if let Ok(t) = Tracked::new(db, unique_name)
 				{
@@ -104,7 +104,6 @@ fn header(
 
 fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap<UniqueName, u32>, to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
 {
-	let unique_name = tracked.unique_name.clone();
 	let common_name = tracked.common_name.clone();
 	ui.group(|ui|
 	{
@@ -113,7 +112,7 @@ fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap
 			ui.horizontal(|ui|
 			{
 				if ui.button("Del").clicked() {*to_remove = Some(i)};
-				ui.heading(common_name.unwrap_or_else(||unique_name.into()).as_str());
+				ui.heading(common_name.as_str());
 			});
 			ui.horizontal(|ui|
 			{
@@ -129,43 +128,38 @@ fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap
 fn recipe_group(
 	ui: &mut Ui,
 	recipe: &crate::Recipe,
-	components: &[crate::Component],
+	components: &[(crate::Requirement, Count)],
 	owned_components: &mut HashMap<UniqueName, u32>) -> egui::InnerResponse<()>
 {
 	ui.vertical(|ui|
 	{
-		let recipe_unique_name = recipe.unique_name.clone();
-		let recipe_common_name = recipe.common_name.clone();
+		let recipe_unique_name = recipe.unique_name();
+		let recipe_common_name = recipe.common_name();
 		component_group(
 			ui,
 			recipe_unique_name,
 			recipe_common_name,
 			owned_components,
 			1.into(),
-			&recipe.active_relics,
-			&recipe.resurgence_relics,
-			recipe.available_from_invasion);
-		for component in components
+			recipe.active_relics(),
+			recipe.resurgence_relics(),
+			recipe.available_from_invasion());
+		for (component, required) in components
 		{
-			let component_unique_name = component.unique_name.clone();
-			let component_common_name = component.common_name.clone();
-			let required = component.count.clone();
-			let active_relics = component.recipe.as_ref()
-				.map(|r|&r.active_relics)
-				.unwrap_or(&component.active_relics);
-			let resurgence_relics = component.recipe.as_ref()
-				.map(|r|&r.resurgence_relics)
-				.unwrap_or(&component.resurgence_relics);
-			let available_from_invastion = component.available_from_invasion;
+			let component_unique_name = component.unique_name();
+			let component_common_name = component.common_name();
+			let active_relics = component.active_relics();
+			let resurgence_relics = component.resurgence_relics();
+			let available_from_invasion = component.available_from_invasion();
 			component_group(
 				ui,
 				component_unique_name,
 				component_common_name,
 				owned_components,
-				required,
+				required.to_owned(),
 				active_relics,
 				resurgence_relics,
-				available_from_invastion);
+				available_from_invasion);
 		}
 	})
 }
@@ -174,7 +168,7 @@ fn recipe_group(
 fn component_group(
 	ui: &mut Ui,
 	unique_name: UniqueName,
-	common_name: Option<CommonName>,
+	common_name: CommonName,
 	owned_components: &mut HashMap<UniqueName, u32>,
 	required: Count,
 	active_relics: &[Relic],
@@ -211,7 +205,7 @@ fn component_group(
 				*owned += 1;
 			}
 
-			let name = common_name.unwrap_or_else(||unique_name.into());
+			let name = common_name;
 			ui.colored_label(color, format!("{} of {}", owned, required));
 			ui.colored_label(color, name.as_str());
 			

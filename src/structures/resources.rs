@@ -21,7 +21,7 @@ impl Resources
 		self.common_names.get(index).cloned()
 	}
 
-	pub fn _fetch_by_common_name(
+	pub fn fetch_by_common_name(
 		&self,
 		common_name: CommonName) -> Option<UniqueName>
 	{

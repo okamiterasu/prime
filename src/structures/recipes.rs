@@ -13,7 +13,7 @@ pub struct Recipes
 
 impl Recipes
 {
-	pub fn _fetch_by_unique_name(
+	pub fn fetch_by_unique_name(
 		&self,
 		unique_name: impl Into<UniqueName>) -> Option<UniqueName>
 	{
@@ -71,7 +71,7 @@ mod tests
 		fn get_nonexistent_name()
 		{
 			let r = Recipes::default();
-			assert!(r._fetch_by_unique_name("foo").is_none());
+			assert!(r.fetch_by_unique_name("foo").is_none());
 		}
 
 		#[test]
@@ -97,7 +97,7 @@ mod tests
 		{
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
-			assert!(r._fetch_by_unique_name("baz").is_none());
+			assert!(r.fetch_by_unique_name("baz").is_none());
 		}
 
 		#[test]
@@ -114,7 +114,7 @@ mod tests
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
 			let bar: UniqueName = "bar".into();
-			let res = r._fetch_by_unique_name("foo").unwrap();
+			let res = r.fetch_by_unique_name("foo").unwrap();
 			assert_eq!(res, bar);
 		}
 
@@ -155,7 +155,7 @@ mod tests
 			let mut r = Recipes::default();
 			r.add("foo", "bar");
 			r.add("baz", "quix");
-			assert!(r._fetch_by_unique_name("quix").is_none());
+			assert!(r.fetch_by_unique_name("quix").is_none());
 		}
 
 		#[test]
@@ -176,7 +176,7 @@ mod tests
 			r.add("foo", "bar");
 			r.add("baz", "quix");
 			let bar: UniqueName = "bar".into();
-			let res = r._fetch_by_unique_name("foo").unwrap();
+			let res = r.fetch_by_unique_name("foo").unwrap();
 			assert_eq!(res, bar);
 		}
 
@@ -198,7 +198,7 @@ mod tests
 			r.add("foo", "bar");
 			r.add("baz", "quix");
 			let quix: UniqueName = "quix".into();
-			let res = r._fetch_by_unique_name("baz").unwrap();
+			let res = r.fetch_by_unique_name("baz").unwrap();
 			assert_eq!(res, quix);
 		}
 	}
