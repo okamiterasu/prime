@@ -46,10 +46,12 @@ impl eframe::App for App
 {
 	fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>)
 	{
+		let tracked = std::mem::take(&mut self.tracked);
+		let owned = std::mem::take(&mut self.owned);
 		cache::save_state(
 			&self.cache_dir.join("tracked.json"),
-			&self.tracked,
-			&self.owned).unwrap();
+			tracked,
+			owned).unwrap();
 	}
 
 	fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)

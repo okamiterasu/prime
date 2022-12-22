@@ -33,14 +33,16 @@ pub(crate) fn load(
 
 pub(crate) fn save(
 	tracked_path: &Path,
-	tracked: &[crate::Tracked],
-	owned: &HashMap<UniqueName, u32>) -> Result<()>
+	tracked: Vec<crate::Tracked>,
+	owned: HashMap<UniqueName, u32>) -> Result<()>
 {
-	let t: Vec<_> = tracked
-		.iter()
-		.map(|t|t.unique_name.clone())
+	let tracked: Vec<_> = tracked.into_iter()
+		.map(|t|t.unique_name)
 		.collect();
-	let saved = Saved {tracked: t, owned: owned.clone()};
+	let owned = owned.into_iter()
+		.filter(|&(_, v)|v!=0)
+		.collect();
+	let saved = Saved {tracked, owned};
 	let file = std::fs::File::create(tracked_path)
 		.context("Creating tracked file")?;
 	let mut buf = io::BufWriter::new(file);
