@@ -1,4 +1,6 @@
-use std::{path::{PathBuf, Path}, collections::HashMap};
+use std::collections::HashMap;
+use std::path::{PathBuf, Path};
+use std::time::{Duration, SystemTime};
 
 use anyhow::{Result, Error, anyhow, bail, Context};
 use eframe::egui;
@@ -163,14 +165,13 @@ fn main() -> Result<()>
 	Ok(())
 }
 
+const SIX_HOURS: Duration = std::time::Duration::from_secs(60*60*6);
 /// Checks if the cached index manifest is older than six hours.
 /// If so, downloads a new version
 fn update_index_if_needed(dir: &Path) -> Result<bool>
 {
 	let index_path = dir.join("index_en.txt.lzma");
-	let six_hours = 60 * 60 * 6;
-	let now = std::time::SystemTime::now();
-	let six_hours_ago = now - std::time::Duration::from_secs(six_hours);
+	let six_hours_ago = SystemTime::now() - SIX_HOURS;
 	let index_out_of_date = std::fs::File::open(&index_path)
 		.and_then(|f|f.metadata())
 		.and_then(|meta|meta.modified())
