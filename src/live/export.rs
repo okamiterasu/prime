@@ -1,5 +1,3 @@
-use std::io;
-
 use anyhow::{Result, Context};
 
 const EXPORT: &str = "https://content.warframe.com/PublicExport";
@@ -15,17 +13,14 @@ pub(crate) fn manifest(name: &str) -> Result<String>
 		.context("Parsing manifest as a String")
 }
 
-pub fn index() -> Result<String>
+pub fn index() -> Result<Vec<u8>>
 {
 	let index_url = format!("{EXPORT}/index_en.txt.lzma");
 	let response = ureq::get(&index_url)
 		.call()
 		.context("Sending GET request for manifest index")?;
-	let mut decompressed = Vec::new();
-	lzma_rs::lzma_decompress(
-		&mut io::BufReader::new(response.into_reader()),
-		&mut decompressed)
-		.context("Decompressing manifest index")?;
-	String::from_utf8(decompressed)
-		.context("Parsing decompressed manifest index")
+	let mut payload = vec![];
+	response.into_reader().read_to_end(&mut payload)
+		.context("Reading response payload")?;
+	Ok(payload)
 }

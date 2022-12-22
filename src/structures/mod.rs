@@ -41,7 +41,7 @@ impl Data
 {
 	pub fn from_cache(cache_dir: &Path) -> Result<Self>
 	{
-		let index = cache::load_index(&cache_dir.join("index_en.txt"))?;
+		let index = cache::load_index(&cache_dir.join("index_en.txt.lzma"))?;
 
 		let mut resources = Resources::default();
 		for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])?

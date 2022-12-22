@@ -32,7 +32,7 @@ fn cache_dir() -> Result<PathBuf>
 	Ok(path)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Rarity
 {
 	COMMON,
@@ -130,27 +130,25 @@ fn main() -> Result<()>
 	let cache_dir = cache_dir()?;
 	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
 
-	if let Some((index, index_raw)) = check_for_manifest_updates(&cache_dir)
-		.context("Checking for manifest updates")?
-	{
-		std::fs::write(cache_dir.join("index_en.txt"), index_raw)?;
-		update_manifests(&cache_dir, &index)
-			.context("Updating manifests")?;
-		remove_old_manifests(&cache_dir, &index)
-			.context("Removing old manifests")?;
-		}
-	// Worldstate has probably changed too, so update that as well.
-	let dt = live::droptable()
-		.context("Downloading scrape droptable")?;
-	std::fs::write(cache_dir.join("droptable.html"), dt)?;
+	let updated = update_index_if_needed(&cache_dir)
+		.context("Checking for manifest updates")?;
 
-	let ws = live::worldstate()
-		.context("Downloading world state")?;
-	std::fs::write(cache_dir.join("worldstate.json"), ws)?;
+	// Should update drop table and world state also
+	if updated
+	{
+		let droptable_path = cache_dir.join("droptable.html");
+		let droptable = live::droptable().context("Downloading scrape droptable")?;
+		std::fs::write(droptable_path, droptable)?;
+
+		let worldstate_path = cache_dir.join("worldstate.json");
+		let worldstate = live::worldstate().context("Downloading world state")?;
+		std::fs::write(worldstate_path, worldstate)?;
+	}
 
 	let mut data = Data::from_cache(&cache_dir)?;
 
-	let (tracked, owned) = cache::load_state(&cache_dir.join("tracked.json"), &mut data)
+	let tracked_path = cache_dir.join("tracked.json");
+	let (tracked, owned) = cache::load_state(&tracked_path, &mut data)
 		.context("Loading tracked file")?;
 
 	let opts = eframe::NativeOptions
@@ -165,42 +163,28 @@ fn main() -> Result<()>
 	Ok(())
 }
 
-// Downloads the index from live and compares it to the local version.
-// If they are not the same, returns both raw and parsed live version.
-fn check_for_manifest_updates(dir: &Path) -> Result<Option<(HashMap<String, String>, String)>>
+/// Checks if the cached index manifest is older than six hours.
+/// If so, downloads a new version
+fn update_index_if_needed(dir: &Path) -> Result<bool>
 {
-	fn parse_live_index(index: &str) -> HashMap<String, String>
+	let index_path = dir.join("index_en.txt.lzma");
+	let six_hours = 60 * 60 * 6;
+	let now = std::time::SystemTime::now();
+	let six_hours_ago = now - std::time::Duration::from_secs(six_hours);
+	let index_out_of_date = std::fs::File::open(&index_path)
+		.and_then(|f|f.metadata())
+		.and_then(|meta|meta.modified())
+		.map(|modi|modi < six_hours_ago)
+		.unwrap_or(true);
+
+	if index_out_of_date
 	{
-		index.lines()
-			.map(|l|(&l[0..l.len()-26], l))
-			.map(|(k, v)|(k.to_owned(), v.to_owned()))
-			.collect()
+		let index = live::index()
+			.context("Downloading new index")?;
+		std::fs::write(index_path, index)
+			.context("Writing new index to disk")?;
 	}
-
-	let live_index_raw = live::index()
-		.context("loading live index")?;
-	let live_index = parse_live_index(&live_index_raw);
-	let local_index = cache::load_index(&dir.join("index_en.txt"))
-		.unwrap_or_default();
-	let is_different = live_index != local_index;
-	Ok(is_different.then_some((live_index, live_index_raw)))
-}
-
-
-
-fn update_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
-{
-	for manifest in index.values()
-	{
-		let path = dir.join(manifest);
-		if !path.exists()
-		{
-			let m = live::manifest(manifest)
-				.with_context(||format!("Downloading manifest: {manifest}"))?;
-			std::fs::write(&path, m)?;
-		}
-	}
-	Ok(())
+	Ok(index_out_of_date)
 }
 
 fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
@@ -210,9 +194,9 @@ fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<(
 		let file_name = file.file_name();
 		let file_name = file_name.to_str()
 			.ok_or_else(||anyhow!("Non-utf8 string"))?;
-		
-		if file_name.starts_with("Export") 
-		&& file_name != index[&file_name[0..file_name.len()-26]]
+
+		if file_name.starts_with("Export")
+			&& file_name != index[&file_name[0..file_name.len()-26]]
 		{
 			std::fs::remove_file(file.path())
 				.with_context(||format!("Deleting file: {:?}", file.file_name()))?;
