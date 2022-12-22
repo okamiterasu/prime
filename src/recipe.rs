@@ -70,7 +70,7 @@ impl Recipe
 
 	pub fn resurgence_relics(&self) -> &[Relic]
 	{
-		if let RecipeType::Prime(ref pr) = self.recipe_type
+		if let RecipeType::Prime(pr) = &self.recipe_type
 		{
 			&pr.resurgence_relics
 		}
@@ -82,7 +82,7 @@ impl Recipe
 
 	pub fn active_relics(&self) -> &[Relic]
 	{
-		if let RecipeType::Prime(ref pr) = self.recipe_type
+		if let RecipeType::Prime(pr) = &self.recipe_type
 		{
 			&pr.active_relics
 		}
@@ -94,7 +94,7 @@ impl Recipe
 
 	pub fn available_from_invasion(&self) -> bool
 	{
-		if let RecipeType::Normal(ref pr) = self.recipe_type
+		if let RecipeType::Normal(pr) = &self.recipe_type
 		{
 			pr.available_from_invasion
 		}

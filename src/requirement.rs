@@ -29,7 +29,6 @@ impl Requirement
 
 			None=>
 			{
-				// let available_from_invasion = db.available_from_invasion(unique_name);
 				let component = Component::new(unique_name.clone(), common_name.clone(), db);
 				RequirementType::Component(component)
 			}
@@ -52,7 +51,7 @@ impl Requirement
 	{
 		match &self.requirement_type
 		{
-			RequirementType::Component(Component::Prime(ref pc))=>
+			RequirementType::Component(Component::Prime(pc))=>
 			{
 				&pc.active_relics
 			},
@@ -70,7 +69,7 @@ impl Requirement
 	{
 		match &self.requirement_type
 		{
-			RequirementType::Component(Component::Prime(ref pc))=>
+			RequirementType::Component(Component::Prime(pc))=>
 			{
 				&pc.resurgence_relics
 			},
@@ -88,7 +87,7 @@ impl Requirement
 	{
 		match &self.requirement_type
 		{
-			RequirementType::Component(Component::Normal(ref nc))=>
+			RequirementType::Component(Component::Normal(nc))=>
 			{
 				nc.available_from_invasion
 			},
