@@ -130,7 +130,7 @@ impl Data
 		})
 	}
 
-	pub fn requirements(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<Vec<(UniqueName, Count)>>
+	pub fn requirements(&self, recipe_unique_name: impl Into<UniqueName>) -> impl Iterator<Item = (UniqueName, Count)> + '_
 	{
 		self.requires.fetch_by_recipe_unique_name(recipe_unique_name.into())
 	}
@@ -145,21 +145,24 @@ impl Data
 		self.resources.fetch_by_common_name(common_name.into())
 	}
 
-	pub fn _how_many_needed(&self, recipe_unique_name: impl Into<UniqueName>, resource_unique_name: impl Into<UniqueName>) -> Option<Count>
+	pub fn _how_many_needed(
+		&self,
+		recipe_unique_name: impl Into<UniqueName>,
+		resource_unique_name: impl Into<UniqueName>) -> Option<Count>
 	{
-		let rec = recipe_unique_name.into();
-		let res = resource_unique_name.into();
-		let requires = self.requires.fetch_by_recipe_unique_name(rec)?;
-		let (_item, count) = requires.into_iter().find(|i|i.0 == res)?;
-		Some(count)
+		let recipe_unique_name = recipe_unique_name.into();
+		let resource_unique_name = resource_unique_name.into();
+		self.requires.fetch_by_recipe_unique_name(recipe_unique_name)
+			.find(|(item, _)| *item == resource_unique_name)
+			.map(|(_item, count)|count)
 	}
 
 	pub fn active_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name.into())?;
+			.fetch_by_reward_unique_name(component_unique_name.into());
 
-		let mut relics = Vec::with_capacity(relic_rewards.len());
+		let mut relics = vec![];
 		for (relic_unique_name, reward_rarity) in relic_rewards
 		{
 			let relic_common_name = self.relics
@@ -180,9 +183,9 @@ impl Data
 	pub fn resurgence_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name.into())?;
+			.fetch_by_reward_unique_name(component_unique_name.into());
 
-		let mut relics = Vec::with_capacity(relic_rewards.len());
+		let mut relics = vec![];
 		for (relic_unique_name, reward_rarity) in relic_rewards
 		{
 			let relic_common_name = self.relics
@@ -200,20 +203,14 @@ impl Data
 		Some(relics)
 	}
 
-	pub fn recipes(&self, result_type: impl Into<UniqueName>) -> Option<Vec<UniqueName>>
+	pub fn recipes(&self, result_type: impl Into<UniqueName>) -> impl Iterator<Item = UniqueName> + '_
 	{
-		let recipes = self.recipes.fetch_by_result_type(result_type)?;
-		let mut t = Vec::with_capacity(recipes.len());
-		for recipe in recipes
-		{
-			t.push(recipe);
-		}
-		Some(t)
+		self.recipes.fetch_by_result_type(result_type)
 	}
 
 	pub fn recipe(&self, result_type: impl Into<UniqueName>) -> Option<UniqueName>
 	{
-		self.recipes(result_type)?.pop()
+		self.recipes(result_type).next()
 	}
 
 	pub fn recipe_result(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<UniqueName>

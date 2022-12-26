@@ -105,17 +105,12 @@ impl Tracked
 		let common_name = db.resource_common_name(unique_name.clone())
 			.context("searching for resource common name")?;
 
-		let recipe_unique_names = db.recipes(unique_name.clone())
-			.context("Searching for resource's recipe")?;
-		if recipe_unique_names.is_empty() {bail!("Recipe not found for {unique_name}")}
-
-		let mut recipes = Vec::with_capacity(recipe_unique_names.len());
-		for recipe_unique_name in recipe_unique_names
+		let mut recipes = vec![];
+		for recipe_unique_name in db.recipes(unique_name.clone())
 		{
 			let recipe = Recipe::new(db, recipe_unique_name.clone())?;
 			let mut components = vec![];
 			for (unique_name, count) in db.requirements(recipe_unique_name.clone())
-				.context("Looking for recipe's requirements")?
 			{
 				let requirement = Requirement::new(unique_name.clone(), db)
 					.with_context(||format!("Generating component data for {:?}", unique_name))?;
@@ -123,6 +118,8 @@ impl Tracked
 			}
 			recipes.push((recipe, components));
 		}
+
+		if recipes.is_empty() {bail!("Recipe not found for {unique_name}")}
 		Ok(Self{common_name, unique_name, recipes})
 	}
 }

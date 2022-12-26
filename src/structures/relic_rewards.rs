@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
-
 use crate::cache::RelicRewardRarity;
-
 use super::types::UniqueName;
 
 #[derive(Default, Debug)]
@@ -20,40 +17,26 @@ impl RelicRewards
 {
 	pub fn _fetch_by_relic_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> Result<Vec<(UniqueName, RelicRewardRarity)>>
+		unique_name: impl Into<UniqueName>) -> impl Iterator<Item = (UniqueName, RelicRewardRarity)> + '_
 	{
 		let indices = self.relic_index.get(&unique_name.into())
-			.ok_or_else(||anyhow!("Relic reward does not exist"))?
-			.clone();
-		let mut t = Vec::with_capacity(indices.len());
-		for index in indices
-		{
-			let reward_unique_name = self.rewards.get(index)
-				.ok_or_else(||anyhow!("Relic reward does not exist"))?
-				.clone();
-			let reward_rarity = self.rarities.get(index)
-				.ok_or_else(||anyhow!("Relic reward does not exist"))?
-				.clone();
-			t.push((reward_unique_name, reward_rarity))
-		}
-		Ok(t)
+			.map(Vec::as_slice)
+			.unwrap_or_default();
+		indices.iter()
+			.flat_map(|&index|Some((self.rewards.get(index)?, self.rarities.get(index)?)))
+			.map(|(reward, rarity)|(reward.clone(), rarity.clone()))
 	}
 
 	pub fn fetch_by_reward_unique_name(
 		&self,
-		unique_name: UniqueName) -> Option<Vec<(UniqueName, RelicRewardRarity)>>
+		unique_name: UniqueName) -> impl Iterator<Item = (UniqueName, RelicRewardRarity)> + '_
 	{
-		let un = unique_name;
-		let indices = self.reward_index.get(&un)?;
-
-		let mut t = Vec::with_capacity(indices.len());
-		for &index in indices
-		{
-			let relic_unique_name = self.relics.get(index).cloned()?;
-			let reward_rarity = self.rarities.get(index).cloned()?;
-			t.push((relic_unique_name, reward_rarity))
-		}
-		Some(t)
+		let indices = self.reward_index.get(&unique_name)
+			.map(Vec::as_slice)
+			.unwrap_or_default();
+		indices.iter()
+			.flat_map(|&index|Some((self.relics.get(index)?, self.rarities.get(index)?)))
+			.map(|(relic, rarity)|(relic.clone(), rarity.clone()))
 	}
 
 	pub fn add(

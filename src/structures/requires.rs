@@ -16,17 +16,14 @@ impl Requires
 {
 	pub fn fetch_by_recipe_unique_name(
 		&self,
-		recipe_unique_name: UniqueName) -> Option<Vec<(UniqueName, Count)>>
+		recipe_unique_name: UniqueName) -> impl Iterator<Item = (UniqueName, Count)> + '_
 	{
-		let indexes = self.recipe_unique_name_index.get(&recipe_unique_name)?;
-		let mut rows = Vec::with_capacity(indexes.len());
-		for index in indexes.iter().cloned()
-		{
-			let unique_name = self.item_types.get(index).cloned()?;
-			let count = self.count.get(index).cloned()?;
-			rows.push((unique_name, count));
-		}
-		Some(rows)
+		let indices = self.recipe_unique_name_index.get(&recipe_unique_name)
+			.map(Vec::as_slice)
+			.unwrap_or_default();
+		indices.iter()
+			.flat_map(|&index|Some((self.item_types.get(index)?, self.count.get(index)?)))
+			.map(|(un, c)|(un.clone(), c.clone()))
 	}
 
 	pub fn _fetch_by_item_type(

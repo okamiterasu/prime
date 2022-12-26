@@ -20,7 +20,8 @@ pub fn index() -> Result<Vec<u8>>
 		.call()
 		.context("Sending GET request for manifest index")?;
 	let mut payload = vec![];
-	response.into_reader().read_to_end(&mut payload)
+	response.into_reader()
+		.read_to_end(&mut payload)
 		.context("Reading response payload")?;
 	Ok(payload)
 }

@@ -23,18 +23,15 @@ impl Recipes
 
 	pub fn fetch_by_result_type(
 		&self,
-		result_type: impl Into<UniqueName>) -> Option<Vec<UniqueName>>
+		result_type: impl Into<UniqueName>) -> impl Iterator<Item = UniqueName> + '_
 	{
 		let result_type = result_type.into();
-		let indices = self.result_type_index.get(&result_type)?;
-		let mut results = Vec::with_capacity(indices.len());
-		for index in indices
-		{
-			let unique_name = self.unique_names.get(*index).cloned()?;
-			results.push(unique_name);
-
-		}
-		Some(results)
+		let indices = self.result_type_index.get(&result_type)
+			.map(Vec::as_slice)
+			.unwrap_or_default();
+		indices.iter()
+			.flat_map(|&index|self.unique_names.get(index))
+			.cloned()
 	}
 
 	pub fn add(
@@ -51,155 +48,5 @@ impl Recipes
 		self.result_type_index.entry(rt)
 			.or_default()
 			.push(index);
-	}
-}
-
-#[cfg(test)]
-mod tests
-{
-	use super::*;
-	mod empty
-	{
-		use super::*;
-		#[test]
-		fn new()
-		{
-			let _ = Recipes::default();
-		}
-
-		#[test]
-		fn get_nonexistent_name()
-		{
-			let r = Recipes::default();
-			assert!(r.fetch_by_unique_name("foo").is_none());
-		}
-
-		#[test]
-		fn get_nonexistent_result()
-		{
-			let r = Recipes::default();
-			assert!(r.fetch_by_result_type("foo").is_none());
-		}
-	}
-
-	mod one
-	{
-		use super::*;
-		#[test]
-		fn new()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-		}
-
-		#[test]
-		fn get_nonexistent_name()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			assert!(r.fetch_by_unique_name("baz").is_none());
-		}
-
-		#[test]
-		fn get_nonexistent_item_type()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			assert!(r.fetch_by_result_type("quix").is_none());
-		}
-
-		#[test]
-		fn get_name()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			let bar: UniqueName = "bar".into();
-			let res = r.fetch_by_unique_name("foo").unwrap();
-			assert_eq!(res, bar);
-		}
-
-		#[test]
-		fn get_type()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			let foo: UniqueName = "foo".into();
-			let res = r.fetch_by_result_type("bar").unwrap();
-			assert_eq!(res, vec![foo]);
-		}
-	}
-
-	mod two
-	{
-		use super::*;
-		#[test]
-		fn new()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-		}
-
-		#[test]
-		fn get_nonexistent_recipe()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			assert!(r.fetch_by_result_type("baz").is_none());
-		}
-
-		#[test]
-		fn get_nonexistent_item_type()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			assert!(r.fetch_by_unique_name("quix").is_none());
-		}
-
-		#[test]
-		fn get_first_recipe()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			let foo: UniqueName = "foo".into();
-			let res = r.fetch_by_result_type("bar").unwrap();
-			assert_eq!(res, vec![foo]);
-		}
-
-		#[test]
-		fn get_first_item_type()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			let bar: UniqueName = "bar".into();
-			let res = r.fetch_by_unique_name("foo").unwrap();
-			assert_eq!(res, bar);
-		}
-
-		#[test]
-		fn get_second_recipe()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			let baz: UniqueName = "baz".into();
-			let res = r.fetch_by_result_type("quix").unwrap();
-			assert_eq!(res, vec![baz]);
-		}
-
-		#[test]
-		fn get_second_item_type()
-		{
-			let mut r = Recipes::default();
-			r.add("foo", "bar");
-			r.add("baz", "quix");
-			let quix: UniqueName = "quix".into();
-			let res = r.fetch_by_unique_name("baz").unwrap();
-			assert_eq!(res, quix);
-		}
 	}
 }
