@@ -1,20 +1,22 @@
 use std::collections::HashMap;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use anyhow::{Result, Error, anyhow, bail, Context};
+use anyhow::{anyhow, bail, Context, Result};
 use eframe::egui;
 
-use structures::{Data, CommonName, UniqueName, Count};
 use crate::recipe::Recipe;
 use crate::requirement::Requirement;
+use structures::{Data, CommonName, UniqueName, Count};
 
-mod live;
-mod ui;
 mod cache;
-mod structures;
-mod requirement;
+mod item_view;
+mod live;
 mod recipe;
+mod relic;
+mod requirement;
+mod structures;
+mod ui;
 
 #[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
@@ -32,61 +34,6 @@ fn cache_dir() -> Result<PathBuf>
 	let mut path = PathBuf::from(home);
 	path.push(".cache/primes/");
 	Ok(path)
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Rarity
-{
-	COMMON,
-	UNCOMMON,
-	RARE
-}
-impl Rarity
-{
-	pub fn as_str(&self) -> &'static str
-	{
-		match self
-		{
-			Self::COMMON=>"COMMON",
-			Self::UNCOMMON=>"UNCOMMON",
-			Self::RARE=>"RARE"
-		}
-	}
-}
-impl TryFrom<&str> for Rarity
-{
-	type Error = Error;
-	fn try_from(i: &str) -> Result<Self, Self::Error>
-	{
-		match i
-		{
-			"COMMON"=>Ok(Self::COMMON),
-			"UNCOMMON"=>Ok(Self::UNCOMMON),
-			"RARE"=>Ok(Self::RARE),
-			_=>Err(anyhow!("Unknown rarity: {}", i))
-		}
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Relic
-{
-	name: String,
-	rarity: Rarity
-}
-
-impl Relic
-{
-	fn new(name: &str, rarity: &str) -> Result<Self>
-	{
-		let rarity = Rarity::try_from(rarity)?;
-		let x = Self
-		{
-			name: name.to_string(),
-			rarity
-		};
-		Ok(x)
-	}
 }
 
 #[derive(Debug)]

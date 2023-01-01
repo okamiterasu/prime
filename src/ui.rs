@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::Rarity;
-use crate::Relic;
-use crate::Data;
 use crate::cache;
+use crate::Data;
+use crate::item_view::ItemView;
+use crate::relic::Rarity;
+use crate::structures::{Count, UniqueName};
 use crate::Tracked;
-use crate::structures::{CommonName, UniqueName, Count};
 
 use eframe::egui;
 use egui::Ui;
@@ -104,7 +104,12 @@ fn header(
 	})
 }
 
-fn item(ui: &mut Ui, tracked: &Tracked, i: usize, owned_components: &mut HashMap<UniqueName, u32>, to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
+fn item(
+	ui: &mut Ui,
+	tracked: &Tracked,
+	i: usize,
+	owned_components: &mut HashMap<UniqueName, u32>,
+	to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
 {
 	let common_name = tracked.common_name.clone();
 	ui.group(|ui|
@@ -135,58 +140,37 @@ fn recipe_group(
 {
 	ui.vertical(|ui|
 	{
-		let recipe_unique_name = recipe.unique_name();
-		let recipe_common_name = recipe.common_name();
 		component_group(
 			ui,
-			recipe_unique_name,
-			recipe_common_name,
 			owned_components,
-			1.into(),
-			recipe.active_relics(),
-			recipe.resurgence_relics(),
-			recipe.available_from_invasion());
+			recipe,
+			1.into());
 		for (component, required) in components
 		{
-			let component_unique_name = component.unique_name();
-			let component_common_name = component.common_name();
-			let active_relics = component.active_relics();
-			let resurgence_relics = component.resurgence_relics();
-			let available_from_invasion = component.available_from_invasion();
 			component_group(
 				ui,
-				component_unique_name,
-				component_common_name,
 				owned_components,
-				required.to_owned(),
-				active_relics,
-				resurgence_relics,
-				available_from_invasion);
+				component,
+				required.to_owned());
 		}
 	})
 }
-
-#[allow(clippy::too_many_arguments)]
 fn component_group(
 	ui: &mut Ui,
-	unique_name: UniqueName,
-	common_name: CommonName,
 	owned_components: &mut HashMap<UniqueName, u32>,
-	required: Count,
-	active_relics: &[Relic],
-	resurgence_relics: &[Relic],
-	available_from_invastion: bool) -> egui::InnerResponse<()>
+	item: impl ItemView,
+	required: Count) -> egui::InnerResponse<()>
 {
 	let mut fullfilled = false;
 	ui.vertical(|ui|
 	{
 		ui.horizontal(|ui|
 		{
-			let owned = match owned_components.get_mut(&unique_name)
+			let owned = match owned_components.get_mut(&item.unique_name())
 			{
 				Some(v)=>v,
 				None=>owned_components
-						.entry(unique_name.to_owned())
+						.entry(item.unique_name())
 						.or_insert(0)
 			};
 			fullfilled = *owned>=required.to_u32();
@@ -206,28 +190,32 @@ fn component_group(
 			{
 				*owned += 1;
 			}
-
-			let name = common_name;
+			
 			ui.colored_label(color, format!("{} of {}", owned, required));
-			ui.colored_label(color, name.as_str());
+			ui.colored_label(color, item.common_name().as_str());
 			
 		});
+
+		let active_relics = item.active_relics();
 		if !active_relics.is_empty() && !fullfilled
 		{
 			ui.vertical(|ui|
 			{
-				for relic in active_relics
+				for relic in item.active_relics()
 				{
-					let color = match relic.rarity {
-						Rarity::COMMON=>Color32::BROWN,
-						Rarity::UNCOMMON=>Color32::GRAY,
-						Rarity::RARE=>Color32::GOLD
+					let color = match relic.rarity
+					{
+						Rarity::Common=>Color32::BROWN,
+						Rarity::Uncommon=>Color32::GRAY,
+						Rarity::Rare=>Color32::GOLD
 					};
 		
 					ui.colored_label(color, &relic.name);
 				}
 			});
 		}
+
+		let resurgence_relics = item.resurgence_relics();
 		if !resurgence_relics.is_empty() && !fullfilled
 		{
 			ui.label("Resurgence Relics");
@@ -235,17 +223,19 @@ fn component_group(
 			{
 				for relic in resurgence_relics
 				{
-					let color = match relic.rarity {
-						Rarity::COMMON=>Color32::BROWN,
-						Rarity::UNCOMMON=>Color32::GRAY,
-						Rarity::RARE=>Color32::GOLD
+					let color = match relic.rarity
+					{
+						Rarity::Common=>Color32::BROWN,
+						Rarity::Uncommon=>Color32::GRAY,
+						Rarity::Rare=>Color32::GOLD
 					};
 		
 					ui.colored_label(color, &relic.name);
 				}
 			});
 		}
-		if available_from_invastion && !fullfilled
+
+		if item.available_from_invasion() && !fullfilled
 		{
 			ui.label("Invastion");
 		}

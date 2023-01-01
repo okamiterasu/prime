@@ -12,8 +12,9 @@ mod resources;
 mod active_relics;
 mod resurgence_relics;
 
-use active_relics::ActiveRelics;
 use crate::cache;
+use crate::relic::Relic;
+use active_relics::ActiveRelics;
 use invasions::Invasions;
 use recipes::Recipes;
 use relics::Relics;
@@ -157,7 +158,7 @@ impl Data
 			.map(|(_item, count)|count)
 	}
 
-	pub fn active_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
+	pub fn active_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name.into());
@@ -169,7 +170,7 @@ impl Data
 				.fetch_by_unique_name(relic_unique_name)?;
 			if self.active_relics.is_active(relic_common_name.clone())
 			{
-				let relic = crate::Relic::new(
+				let relic = Relic::new(
 					relic_common_name.as_str(),
 					reward_rarity.as_str()).ok()?;
 				relics.push(relic);
@@ -180,7 +181,7 @@ impl Data
 		Some(relics)
 	}
 
-	pub fn resurgence_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<crate::Relic>>
+	pub fn resurgence_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<Relic>>
 	{
 		let relic_rewards = self.relic_rewards
 			.fetch_by_reward_unique_name(component_unique_name.into());
@@ -192,7 +193,7 @@ impl Data
 				.fetch_by_unique_name(relic_unique_name.clone())?;
 			if self.resurgence_relics.is_active(relic_unique_name.clone())
 			{
-				let relic = crate::Relic::new(
+				let relic = Relic::new(
 					relic_common_name.as_str(),
 					reward_rarity.as_str()).ok()?;
 				relics.push(relic);

@@ -1,7 +1,8 @@
 use anyhow::{Result, Context};
 
+use crate::item_view::ItemView;
 use crate::structures::{CommonName, UniqueName, Data};
-use crate::Relic;
+use crate::relic::Relic;
 
 #[derive(Debug)]
 pub struct Recipe
@@ -57,18 +58,21 @@ impl Recipe
 		};
 		Ok(Recipe{common_name, unique_name, recipe_type})
 	}
+}
 
-	pub fn common_name(&self) -> CommonName
+impl ItemView for Recipe
+{
+	fn common_name(&self) -> CommonName
 	{
 		self.common_name.clone()
 	}
 
-	pub fn unique_name(&self) -> UniqueName
+	fn unique_name(&self) -> UniqueName
 	{
 		self.unique_name.clone()
 	}
 
-	pub fn resurgence_relics(&self) -> &[Relic]
+	fn resurgence_relics(&self) -> &[Relic]
 	{
 		if let RecipeType::Prime(pr) = &self.recipe_type
 		{
@@ -80,7 +84,7 @@ impl Recipe
 		}
 	}
 
-	pub fn active_relics(&self) -> &[Relic]
+	fn active_relics(&self) -> &[Relic]
 	{
 		if let RecipeType::Prime(pr) = &self.recipe_type
 		{
@@ -92,7 +96,7 @@ impl Recipe
 		}
 	}
 
-	pub fn available_from_invasion(&self) -> bool
+	fn available_from_invasion(&self) -> bool
 	{
 		if let RecipeType::Normal(pr) = &self.recipe_type
 		{
@@ -103,7 +107,34 @@ impl Recipe
 			false
 		}
 	}
+}
 
+impl ItemView for &Recipe
+{
+	fn common_name(&self) -> CommonName
+	{
+		(*self).common_name()
+	}
+
+	fn unique_name(&self) -> UniqueName
+	{
+		(*self).unique_name()
+	}
+
+	fn resurgence_relics(&self) -> &[Relic]
+	{
+		(*self).resurgence_relics()
+	}
+
+	fn active_relics(&self) -> &[Relic]
+	{
+		(*self).active_relics()
+	}
+
+	fn available_from_invasion(&self) -> bool
+	{
+		(*self).available_from_invasion()
+	}
 }
 
 #[derive(Debug)]

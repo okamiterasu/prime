@@ -1,7 +1,8 @@
 use anyhow::{Result, Context};
 
+use crate::item_view::ItemView;
 use crate::structures::{CommonName, UniqueName, Data};
-use crate::Relic;
+use crate::relic::Relic;
 use crate::recipe;
 
 #[derive(Debug)]
@@ -36,18 +37,21 @@ impl Requirement
 
 		Ok(Self{common_name, unique_name, requirement_type})
 	}
+}
 
-	pub fn common_name(&self) -> CommonName
+impl ItemView for Requirement
+{
+	fn common_name(&self) -> CommonName
 	{
 		self.common_name.clone()
 	}
 
-	pub fn unique_name(&self) -> UniqueName
+	fn unique_name(&self) -> UniqueName
 	{
 		self.unique_name.clone()
 	}
 
-	pub fn active_relics(&self) -> &[Relic]
+	fn active_relics(&self) -> &[Relic]
 	{
 		match &self.requirement_type
 		{
@@ -56,16 +60,16 @@ impl Requirement
 				&pc.active_relics
 			},
 
-			RequirementType::CraftComponent(cc)=>
+			RequirementType::CraftComponent(recipe)=>
 			{
-				cc.active_relics()
+				recipe.active_relics()
 			},
 
 			_ => &[]
 		}
 	}
 
-	pub fn resurgence_relics(&self) -> &[Relic]
+	fn resurgence_relics(&self) -> &[Relic]
 	{
 		match &self.requirement_type
 		{
@@ -74,16 +78,16 @@ impl Requirement
 				&pc.resurgence_relics
 			},
 
-			RequirementType::CraftComponent(cc)=>
+			RequirementType::CraftComponent(recipe)=>
 			{
-				cc.resurgence_relics()
+				recipe.resurgence_relics()
 			},
 
 			_ => &[]
 		}
 	}
 
-	pub fn available_from_invasion(&self) -> bool
+	fn available_from_invasion(&self) -> bool
 	{
 		match &self.requirement_type
 		{
@@ -99,6 +103,34 @@ impl Requirement
 
 			_ => false
 		}
+	}
+}
+
+impl ItemView for &Requirement
+{
+	fn common_name(&self) -> CommonName
+	{
+		(*self).common_name()
+	}
+
+	fn unique_name(&self) -> UniqueName
+	{
+		(*self).unique_name()
+	}
+
+	fn resurgence_relics(&self) -> &[Relic]
+	{
+		(*self).resurgence_relics()
+	}
+
+	fn active_relics(&self) -> &[Relic]
+	{
+		(*self).active_relics()
+	}
+
+	fn available_from_invasion(&self) -> bool
+	{
+		(*self).available_from_invasion()
 	}
 }
 
