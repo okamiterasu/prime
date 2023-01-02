@@ -192,8 +192,14 @@ fn component_group(
 			
 		});
 
+		// No need to bother showing drop information if we already have it
+		if fullfilled
+		{
+			return
+		}
+
 		let active_relics = item.active_relics();
-		if !active_relics.is_empty() && !fullfilled
+		if !active_relics.is_empty()
 		{
 			ui.vertical(|ui|
 			{
@@ -212,7 +218,7 @@ fn component_group(
 		}
 
 		let resurgence_relics = item.resurgence_relics();
-		if !resurgence_relics.is_empty() && !fullfilled
+		if !resurgence_relics.is_empty()
 		{
 			ui.label("Resurgence Relics");
 			ui.vertical(|ui|
@@ -231,7 +237,7 @@ fn component_group(
 			});
 		}
 
-		if item.available_from_invasion() && !fullfilled
+		if item.available_from_invasion()
 		{
 			ui.label("Invastion");
 		}
