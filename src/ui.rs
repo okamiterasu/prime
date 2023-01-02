@@ -161,26 +161,22 @@ fn component_group(
 	item: impl ItemView,
 	required: Count) -> egui::InnerResponse<()>
 {
-	let mut fullfilled = false;
+	let owned = match owned_components.get_mut(&item.unique_name())
+	{
+		Some(v)=>v,
+		None=>owned_components
+			.entry(item.unique_name())
+			.or_insert(0)
+	};
+	let fullfilled = *owned>=required.to_u32();
+	let color = fullfilled
+		.then_some(Color32::BLACK)
+		.unwrap_or_else(||ui.visuals().text_color());
+
 	ui.vertical(|ui|
 	{
 		ui.horizontal(|ui|
 		{
-			let owned = match owned_components.get_mut(&item.unique_name())
-			{
-				Some(v)=>v,
-				None=>owned_components
-						.entry(item.unique_name())
-						.or_insert(0)
-			};
-			fullfilled = *owned>=required.to_u32();
-
-			let color = if fullfilled {
-				Color32::BLACK
-			} else {
-				ui.visuals().text_color()
-			};
-
 			if ui.button("-").clicked()
 			{
 				*owned = owned.saturating_sub(1);
