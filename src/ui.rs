@@ -81,7 +81,7 @@ fn header(
 	ui: &mut Ui,
 	add_search: &mut String,
 	db: &Data,
-	tracked: &mut Vec<Tracked>) -> egui::InnerResponse<()>
+	tracked: &mut Vec<Tracked>)
 {
 	ui.heading("Recipe Tracker");
 	ui.horizontal(|ui|
@@ -101,7 +101,7 @@ fn header(
 			add_search.clear();
 			tracked.sort_by(|a, b|a.common_name.cmp(&b.common_name));
 		}
-	})
+	});
 }
 
 fn item(
@@ -109,7 +109,7 @@ fn item(
 	tracked: &Tracked,
 	i: usize,
 	owned_components: &mut HashMap<UniqueName, u32>,
-	to_remove: &mut Option<usize>) -> egui::InnerResponse<()>
+	to_remove: &mut Option<usize>)
 {
 	let common_name = tracked.common_name.clone();
 	ui.group(|ui|
@@ -129,14 +129,14 @@ fn item(
 				}
 			});
 		});
-	})
+	});
 }
 
 fn recipe_group(
 	ui: &mut Ui,
 	recipe: &crate::Recipe,
 	components: &[(crate::Requirement, Count)],
-	owned_components: &mut HashMap<UniqueName, u32>) -> egui::InnerResponse<()>
+	owned_components: &mut HashMap<UniqueName, u32>)
 {
 	ui.vertical(|ui|
 	{
@@ -153,21 +153,17 @@ fn recipe_group(
 				component,
 				required.to_owned());
 		}
-	})
+	});
 }
 fn component_group(
 	ui: &mut Ui,
 	owned_components: &mut HashMap<UniqueName, u32>,
 	item: impl ItemView,
-	required: Count) -> egui::InnerResponse<()>
+	required: Count)
 {
-	let owned = match owned_components.get_mut(&item.unique_name())
-	{
-		Some(v)=>v,
-		None=>owned_components
-			.entry(item.unique_name())
-			.or_insert(0)
-	};
+	let owned = owned_components
+		.entry(item.unique_name())
+		.or_default();
 	let fullfilled = *owned>=required.to_u32();
 	let color = fullfilled
 		.then_some(Color32::BLACK)
@@ -241,5 +237,5 @@ fn component_group(
 		{
 			ui.label("Invastion");
 		}
-	})
+	});
 }
