@@ -17,9 +17,9 @@ impl RelicRewards
 {
 	pub fn _fetch_by_relic_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> impl Iterator<Item = (UniqueName, RelicRewardRarity)> + '_
+		unique_name: UniqueName) -> impl Iterator<Item = (UniqueName, RelicRewardRarity)> + '_
 	{
-		let indices = self.relic_index.get(&unique_name.into())
+		let indices = self.relic_index.get(&unique_name)
 			.map(Vec::as_slice)
 			.unwrap_or_default();
 		indices.iter()
@@ -46,15 +46,15 @@ impl RelicRewards
 		reward_rarity: RelicRewardRarity)
 	{
 		let index = self.relics.len();
-		let run = relic_unique_name.into();
-		self.relics.push(run.clone());
-		self.relic_index.entry(run)
+		let relic_unique_name = relic_unique_name.into();
+		self.relics.push(relic_unique_name.clone());
+		self.relic_index.entry(relic_unique_name)
 			.or_default()
 			.push(index);
 
-		let run = reward_unique_name.into();
-		self.rewards.push(run.clone());
-		self.reward_index.entry(run)
+		let reward_unique_name = reward_unique_name.into();
+		self.rewards.push(reward_unique_name.clone());
+		self.reward_index.entry(reward_unique_name)
 			.or_default()
 			.push(index);
 

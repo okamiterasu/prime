@@ -15,17 +15,16 @@ impl Recipes
 {
 	pub fn fetch_by_unique_name(
 		&self,
-		unique_name: impl Into<UniqueName>) -> Option<UniqueName>
+		unique_name: UniqueName) -> Option<UniqueName>
 	{
-		let &i = self.unique_name_index.get(&unique_name.into())?;
+		let &i = self.unique_name_index.get(&unique_name)?;
 		self.result_types.get(i).cloned()
 	}
 
 	pub fn fetch_by_result_type(
 		&self,
-		result_type: impl Into<UniqueName>) -> impl Iterator<Item = UniqueName> + '_
+		result_type: UniqueName) -> impl Iterator<Item = UniqueName> + '_
 	{
-		let result_type = result_type.into();
 		let indices = self.result_type_index.get(&result_type)
 			.map(Vec::as_slice)
 			.unwrap_or_default();
@@ -39,13 +38,13 @@ impl Recipes
 		unique_name: impl Into<UniqueName>,
 		result_type: impl Into<UniqueName>)
 	{
-		let un = unique_name.into();
-		let rt = result_type.into();
+		let unique_name = unique_name.into();
+		let result_type = result_type.into();
 		let index = self.unique_names.len();
-		self.unique_names.push(un.clone());
-		self.unique_name_index.insert(un, index);
-		self.result_types.push(rt.clone());
-		self.result_type_index.entry(rt)
+		self.unique_names.push(unique_name.clone());
+		self.unique_name_index.insert(unique_name, index);
+		self.result_types.push(result_type.clone());
+		self.result_type_index.entry(result_type)
 			.or_default()
 			.push(index);
 	}

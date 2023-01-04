@@ -131,14 +131,14 @@ impl Data
 		})
 	}
 
-	pub fn requirements(&self, recipe_unique_name: impl Into<UniqueName>) -> impl Iterator<Item = (UniqueName, Count)> + '_
+	pub fn requirements(&self, recipe_unique_name: UniqueName) -> impl Iterator<Item = (UniqueName, Count)> + '_
 	{
-		self.requires.fetch_by_recipe_unique_name(recipe_unique_name.into())
+		self.requires.fetch_by_recipe_unique_name(recipe_unique_name)
 	}
 
-	pub fn resource_common_name(&self, unique_name: impl Into<UniqueName>) -> Option<CommonName>
+	pub fn resource_common_name(&self, unique_name: UniqueName) -> Option<CommonName>
 	{
-		self.resources.fetch_by_unique_name(unique_name.into())
+		self.resources.fetch_by_unique_name(unique_name)
 	}
 
 	pub fn resource_unique_name(&self, common_name: impl Into<CommonName>) -> Option<UniqueName>
@@ -148,20 +148,18 @@ impl Data
 
 	pub fn _how_many_needed(
 		&self,
-		recipe_unique_name: impl Into<UniqueName>,
-		resource_unique_name: impl Into<UniqueName>) -> Option<Count>
+		recipe_unique_name: UniqueName,
+		resource_unique_name: UniqueName) -> Option<Count>
 	{
-		let recipe_unique_name = recipe_unique_name.into();
-		let resource_unique_name = resource_unique_name.into();
 		self.requires.fetch_by_recipe_unique_name(recipe_unique_name)
 			.find(|(item, _)| *item == resource_unique_name)
 			.map(|(_item, count)|count)
 	}
 
-	pub fn active_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<Relic>>
+	pub fn active_relics(&self, component_unique_name: UniqueName) -> Option<Vec<Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name.into());
+			.fetch_by_reward_unique_name(component_unique_name);
 
 		let mut relics = vec![];
 		for (relic_unique_name, reward_rarity) in relic_rewards
@@ -181,10 +179,10 @@ impl Data
 		Some(relics)
 	}
 
-	pub fn resurgence_relics(&self, component_unique_name: impl Into<UniqueName>) -> Option<Vec<Relic>>
+	pub fn resurgence_relics(&self, component_unique_name: UniqueName) -> Option<Vec<Relic>>
 	{
 		let relic_rewards = self.relic_rewards
-			.fetch_by_reward_unique_name(component_unique_name.into());
+			.fetch_by_reward_unique_name(component_unique_name);
 
 		let mut relics = vec![];
 		for (relic_unique_name, reward_rarity) in relic_rewards
@@ -204,24 +202,24 @@ impl Data
 		Some(relics)
 	}
 
-	pub fn recipes(&self, result_type: impl Into<UniqueName>) -> impl Iterator<Item = UniqueName> + '_
+	pub fn recipes(&self, result_type: UniqueName) -> impl Iterator<Item = UniqueName> + '_
 	{
 		self.recipes.fetch_by_result_type(result_type)
 	}
 
-	pub fn recipe(&self, result_type: impl Into<UniqueName>) -> Option<UniqueName>
+	pub fn recipe(&self, result_type: UniqueName) -> Option<UniqueName>
 	{
 		self.recipes(result_type).next()
 	}
 
-	pub fn recipe_result(&self, recipe_unique_name: impl Into<UniqueName>) -> Option<UniqueName>
+	pub fn recipe_result(&self, recipe_unique_name: UniqueName) -> Option<UniqueName>
 	{
 		self.recipes.fetch_by_unique_name(recipe_unique_name)
 	}
 
-	pub fn available_from_invasion(&self, unique_name: impl Into<UniqueName>) -> bool
+	pub fn available_from_invasion(&self, unique_name: UniqueName) -> bool
 	{
-		self.invasions.drops_from_invasion(unique_name.into())
+		self.invasions.drops_from_invasion(unique_name)
 	}
 
 }
