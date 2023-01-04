@@ -154,9 +154,9 @@ impl Component
 	{
 		if common_name.as_str().contains("Prime")
 		{
-			let active_relics = db.active_relics(unique_name.as_str())
+			let active_relics = db.active_relics(unique_name.clone())
 				.unwrap_or_default();
-			let resurgence_relics = db.resurgence_relics(unique_name.as_str())
+			let resurgence_relics = db.resurgence_relics(unique_name)
 				.unwrap_or_default();
 			let prime_component = PrimeComponent
 			{

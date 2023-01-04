@@ -118,7 +118,10 @@ fn item(
 		{
 			ui.horizontal(|ui|
 			{
-				if ui.button("Del").clicked() {*to_remove = Some(i)};
+				if ui.button("Del").clicked()
+				{
+					*to_remove = Some(i)
+				};
 				ui.heading(common_name.as_str());
 			});
 			ui.horizontal(|ui|
@@ -164,7 +167,7 @@ fn component_group(
 	let owned = owned_components
 		.entry(item.unique_name())
 		.or_default();
-	let fullfilled = *owned>=required.to_u32();
+	let fullfilled = *owned >= required.to_u32();
 	let color = fullfilled
 		.then_some(Color32::BLACK)
 		.unwrap_or_else(||ui.visuals().text_color());

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result, Error};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Rarity
 {
 	Common,
@@ -40,5 +40,10 @@ impl Relic
 			rarity
 		};
 		Ok(x)
+	}
+
+	pub fn name(&self) -> &str
+	{
+		&self.name
 	}
 }

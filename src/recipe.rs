@@ -36,9 +36,9 @@ impl Recipe
 	{
 		let recipe_type =  if common_name.as_str().contains("Prime")
 		{
-			let active_relics = db.active_relics(unique_name.as_str())
+			let active_relics = db.active_relics(unique_name.clone())
 				.unwrap_or_default();
-			let resurgence_relics = db.resurgence_relics(unique_name.as_str())
+			let resurgence_relics = db.resurgence_relics(unique_name.clone())
 				.unwrap_or_default();
 			let recipe = PrimeRecipe
 			{
@@ -49,7 +49,7 @@ impl Recipe
 		}
 		else
 		{
-			let available_from_invasion = db.available_from_invasion(unique_name.as_str());
+			let available_from_invasion = db.available_from_invasion(unique_name.clone());
 			let recipe = NormalRecipe
 			{
 				available_from_invasion

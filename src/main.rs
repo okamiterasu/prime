@@ -117,9 +117,9 @@ fn update_index_if_needed(dir: &Path) -> Result<bool>
 	let index_path = dir.join("index_en.txt.lzma");
 	let six_hours_ago = SystemTime::now() - SIX_HOURS;
 	let index_out_of_date = std::fs::File::open(&index_path)
-		.and_then(|f|f.metadata())
-		.and_then(|meta|meta.modified())
-		.map(|modi|modi < six_hours_ago)
+		.and_then(|file|file.metadata())
+		.and_then(|metadata|metadata.modified())
+		.map(|last_modified|last_modified < six_hours_ago)
 		.unwrap_or(true);
 
 	if index_out_of_date

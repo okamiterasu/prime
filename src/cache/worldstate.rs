@@ -107,8 +107,8 @@ pub fn resurgence_relics(file_path: &Path) -> Result<Vec<String>>
 		let worldstate = crate::live::worldstate()?;
 		std::fs::write(file_path, worldstate)?;
 	}
-
-	let reader = BufReader::new(File::open(file_path)?);
+	let reader = File::open(file_path)
+		.map(BufReader::new)?;
 	let world_state: State = serde_json::from_reader(reader)?;
 	let store_items = world_state.prime_vault_traders.iter()
 		.flat_map(|t|&t.manifest)
