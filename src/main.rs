@@ -7,7 +7,7 @@ use eframe::egui;
 
 use crate::recipe::Recipe;
 use crate::requirement::Requirement;
-use structures::{Data, CommonName, UniqueName, Count};
+use crate::structures::{Data, CommonName, UniqueName, Count};
 
 mod cache;
 mod item_view;
@@ -37,11 +37,11 @@ fn cache_dir() -> Result<PathBuf>
 }
 
 #[derive(Debug)]
-pub(crate) struct Tracked
+struct Tracked
 {
-	pub(crate) common_name: CommonName,
-	pub(crate) unique_name: UniqueName,
-	pub(crate) recipes: Vec<(Recipe, Vec<(Requirement, Count)>)>
+	common_name: CommonName,
+	unique_name: UniqueName,
+	recipes: Vec<(Recipe, Vec<(Requirement, Count)>)>
 }
 
 impl Tracked

@@ -12,7 +12,7 @@ use eframe::egui;
 use egui::Ui;
 use egui::Color32;
 
-pub(crate) struct App
+pub struct App
 {
 	db: Data,
 	tracked: Vec<Tracked>,
@@ -208,7 +208,7 @@ fn component_group(
 						Rarity::Rare=>Color32::GOLD
 					};
 		
-					ui.colored_label(color, &relic.name);
+					ui.colored_label(color, relic.name());
 				}
 			});
 		}
@@ -228,7 +228,7 @@ fn component_group(
 						Rarity::Rare=>Color32::GOLD
 					};
 		
-					ui.colored_label(color, &relic.name);
+					ui.colored_label(color, relic.name());
 				}
 			});
 		}

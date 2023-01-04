@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(into = "String")]
 #[serde(from = "String")]
-pub struct UniqueName(pub Rc<str>);
+pub struct UniqueName(Rc<str>);
 
 impl UniqueName
 {

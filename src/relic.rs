@@ -25,7 +25,7 @@ impl TryFrom<&str> for Rarity
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Relic
 {
-	pub name: String,
+	name: String,
 	pub rarity: Rarity
 }
 

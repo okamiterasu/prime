@@ -140,8 +140,8 @@ impl ItemView for &Recipe
 #[derive(Debug)]
 pub struct PrimeRecipe
 {
-	pub active_relics: Vec<Relic>,
-	pub resurgence_relics: Vec<Relic>,
+	active_relics: Vec<Relic>,
+	resurgence_relics: Vec<Relic>,
 }
 
 #[derive(Debug)]
