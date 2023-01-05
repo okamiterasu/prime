@@ -1,6 +1,10 @@
 use anyhow::{anyhow, Result, Error};
+use serde::Deserialize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+use crate::structures::CommonName;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[serde(rename_all="UPPERCASE")]
 pub enum Rarity
 {
 	Common,
@@ -25,25 +29,19 @@ impl TryFrom<&str> for Rarity
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Relic
 {
-	name: String,
+	name: CommonName,
 	pub rarity: Rarity
 }
 
 impl Relic
 {
-	pub fn new(name: &str, rarity: &str) -> Result<Self>
+	pub fn new(name: CommonName, rarity: Rarity) -> Self
 	{
-		let rarity = Rarity::try_from(rarity)?;
-		let x = Self
-		{
-			name: name.to_string(),
-			rarity
-		};
-		Ok(x)
+		Self{name, rarity}
 	}
 
 	pub fn name(&self) -> &str
 	{
-		&self.name
+		self.name.as_str()
 	}
 }

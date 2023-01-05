@@ -4,41 +4,7 @@ use anyhow::{Result, Context, anyhow};
 use serde::{Deserialize};
 
 use super::load;
-
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all="UPPERCASE")]
-pub enum Rarity
-{
-	Common,
-	Uncommon,
-	Rare
-}
-impl Rarity
-{
-	pub fn as_str(&self) -> &'static str
-	{
-		match self
-		{
-			Self::Common=>"COMMON",
-			Self::Uncommon=>"UNCOMMON",
-			Self::Rare=>"RARE"
-		}
-	}
-}
-impl TryFrom<&str> for Rarity
-{
-	type Error = anyhow::Error;
-	fn try_from(i: &str) -> Result<Self, Self::Error>
-	{
-		match i
-		{
-			"COMMON"=>Ok(Self::Common),
-			"UNCOMMON"=>Ok(Self::Uncommon),
-			"RARE"=>Ok(Self::Rare),
-			_=>Err(anyhow!("Invalid rarity: {i}"))
-		}
-	}
-}
+use crate::relic::Rarity;
 
 #[derive(Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "PascalCase")]

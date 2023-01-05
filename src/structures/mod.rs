@@ -96,7 +96,10 @@ impl Data
 				let reward_unique_name = reward_unique_name
 					.strip_suffix('/')
 					.unwrap_or(&reward_unique_name);
-				relic_rewards.add(relic_unique_name.as_ref(), reward_unique_name, reward.rarity);
+				relic_rewards.add(
+					relic_unique_name.as_ref(),
+					reward_unique_name,
+					reward.rarity);
 			}
 		}
 
@@ -168,9 +171,7 @@ impl Data
 				.fetch_by_unique_name(relic_unique_name)?;
 			if self.active_relics.is_active(relic_common_name.clone())
 			{
-				let relic = Relic::new(
-					relic_common_name.as_str(),
-					reward_rarity.as_str()).ok()?;
+				let relic = Relic::new(relic_common_name, reward_rarity);
 				relics.push(relic);
 			}
 		}
@@ -191,9 +192,7 @@ impl Data
 				.fetch_by_unique_name(relic_unique_name.clone())?;
 			if self.resurgence_relics.is_active(relic_unique_name.clone())
 			{
-				let relic = Relic::new(
-					relic_common_name.as_str(),
-					reward_rarity.as_str()).ok()?;
+				let relic = Relic::new(relic_common_name, reward_rarity);
 				relics.push(relic);
 			}
 		}

@@ -23,7 +23,7 @@ impl Requires
 			.unwrap_or_default();
 		indices.iter()
 			.flat_map(|&index|Some((self.item_types.get(index)?, self.count.get(index)?)))
-			.map(|(un, c)|(un.clone(), c.clone()))
+			.map(|(un, &c)|(un.clone(), c))
 	}
 
 	pub fn _fetch_by_item_type(
