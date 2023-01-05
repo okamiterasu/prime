@@ -115,12 +115,12 @@ impl From<UniqueName> for CommonName
 	}
 }
 
-#[derive(Debug, Default, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Count(pub u32);
 
 impl Count
 {
-	pub fn to_u32(&self) -> u32
+	pub fn to_u32(self) -> u32
 	{
 		self.0
 	}
