@@ -52,17 +52,16 @@ impl Data
 
 		for warframe in cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])?
 		{
-			let unique_name = warframe.unique_name.as_ref();
-			let common_name = warframe.name.strip_prefix("<ARCHWING> ")
+			let unique_name = warframe.unique_name;
+			let common_name = warframe.name
+				.strip_prefix("<ARCHWING> ")
 				.unwrap_or(&warframe.name);
 			resources.add(unique_name, common_name);
 		}
 
 		for weapon in cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])?
 		{
-			let unique_name = weapon.unique_name.as_ref();
-			let common_name = weapon.name.as_ref();
-			resources.add(unique_name, common_name);
+			resources.add(weapon.unique_name, weapon.name);
 		}
 
 		let mut requires = Requires::default();

@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
+use scraper::{Html, Selector};
 
 fn is_relic(item: &str) -> bool
 {
@@ -12,8 +13,6 @@ fn is_relic(item: &str) -> bool
 
 pub fn active_relics(file_path: &Path) -> Result<Vec<String>>
 {
-	use scraper::{Html, Selector};
-
 	if !file_path.exists()
 	{
 		let table = crate::live::droptable()?;
@@ -27,7 +26,7 @@ pub fn active_relics(file_path: &Path) -> Result<Vec<String>>
 	let relic_selector = Selector::parse(r#"td"#).unwrap();
 	let relics = table.select(&relic_selector)
 		.flat_map(|e|e.text().next())
-		.filter(|r|is_relic(r))
+		.filter(|&r|is_relic(r))
 		.map(|r|r.trim_end_matches(" (Radiant)"))
 		.map(|r|r.to_string())
 		.collect();
