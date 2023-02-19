@@ -60,7 +60,7 @@ impl Tracked
 			for (unique_name, count) in db.requirements(recipe_unique_name.clone())
 			{
 				let requirement = Requirement::new(unique_name.clone(), db)
-					.with_context(||format!("Generating component data for {:?}", unique_name))?;
+					.with_context(||format!("Generating component data for {unique_name:?}"))?;
 				components.push((requirement, count));
 			}
 			recipes.push((recipe, components));
@@ -105,7 +105,7 @@ fn main() -> Result<()>
 	eframe::run_native(
 		"Recipe Tracker",
 		opts,
-		Box::new(|_cc| Box::new(ui::App::with_state(data, tracked, owned, cache_dir))));
+		Box::new(|_cc| Box::new(ui::App::with_state(data, tracked, owned, cache_dir)))).unwrap();
 	Ok(())
 }
 

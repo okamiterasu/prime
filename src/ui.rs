@@ -186,7 +186,7 @@ fn component_group(
 				*owned += 1;
 			}
 			
-			ui.colored_label(color, format!("{} of {}", owned, required));
+			ui.colored_label(color, format!("{owned} of {required}"));
 			ui.colored_label(color, item.common_name().as_str());
 			
 		});

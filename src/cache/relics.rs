@@ -35,7 +35,8 @@ impl TryFrom<RelicArcane> for Relic
 {
 	type Error = anyhow::Error;
 
-	fn try_from(value: RelicArcane) -> Result<Self, Self::Error> {
+	fn try_from(value: RelicArcane) -> Result<Self, Self::Error>
+	{
 		if let Some(relic_rewards) = value.relic_rewards
 		{
 			Ok(Self
