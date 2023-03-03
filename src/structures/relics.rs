@@ -31,16 +31,14 @@ impl Relics
 
 	pub fn add(
 		&mut self,
-		unique_name: impl Into<UniqueName>,
-		common_name: impl Into<CommonName>)
+		unique_name: UniqueName,
+		common_name: CommonName)
 	{
 		let index = self.unique_names.len();
-		let un = unique_name.into();
-		self.unique_names.push(un.clone());
-		self.unique_name_index.insert(un, index);
+		self.unique_names.push(unique_name.clone());
+		self.unique_name_index.insert(unique_name, index);
 
-		let cn = common_name.into();
-		self.common_names.push(cn.clone());
-		self.common_name_index.insert(cn, index);
+		self.common_names.push(common_name.clone());
+		self.common_name_index.insert(common_name, index);
 	}
 }

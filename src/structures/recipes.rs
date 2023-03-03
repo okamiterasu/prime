@@ -35,11 +35,9 @@ impl Recipes
 
 	pub fn add(
 		&mut self,
-		unique_name: impl Into<UniqueName>,
-		result_type: impl Into<UniqueName>)
+		unique_name: UniqueName,
+		result_type: UniqueName)
 	{
-		let unique_name = unique_name.into();
-		let result_type = result_type.into();
 		let index = self.unique_names.len();
 		self.unique_names.push(unique_name.clone());
 		self.unique_name_index.insert(unique_name, index);

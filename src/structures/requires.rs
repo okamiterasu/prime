@@ -38,20 +38,18 @@ impl Requires
 
 	pub fn add(
 		&mut self,
-		recipe_unique_name: impl Into<UniqueName>,
-		item_type: impl Into<UniqueName>,
+		recipe_unique_name: UniqueName,
+		item_type: UniqueName,
 		count: impl Into<Count>)
 	{
 		let index = self.recipe_unique_names.len();
-		let run = recipe_unique_name.into();
-		self.recipe_unique_names.push(run.clone());
-		self.recipe_unique_name_index.entry(run)
+		self.recipe_unique_names.push(recipe_unique_name.clone());
+		self.recipe_unique_name_index.entry(recipe_unique_name)
 			.or_default()
 			.push(index);
 
-		let it = item_type.into();
-		self.item_types.push(it.clone());
-		self.item_type_index.insert(it, index);
+		self.item_types.push(item_type.clone());
+		self.item_type_index.insert(item_type, index);
 
 		let c = count.into();
 		self.count.push(c);

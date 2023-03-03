@@ -41,18 +41,16 @@ impl RelicRewards
 
 	pub fn add(
 		&mut self,
-		relic_unique_name: impl Into<UniqueName>,
-		reward_unique_name: impl Into<UniqueName>,
+		relic_unique_name: UniqueName,
+		reward_unique_name: UniqueName,
 		reward_rarity: Rarity)
 	{
 		let index = self.relics.len();
-		let relic_unique_name = relic_unique_name.into();
 		self.relics.push(relic_unique_name.clone());
 		self.relic_index.entry(relic_unique_name)
 			.or_default()
 			.push(index);
 
-		let reward_unique_name = reward_unique_name.into();
 		self.rewards.push(reward_unique_name.clone());
 		self.reward_index.entry(reward_unique_name)
 			.or_default()

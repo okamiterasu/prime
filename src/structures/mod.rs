@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::path::Path;
 
 use anyhow::Result;
@@ -38,43 +40,76 @@ pub struct Data
 	resurgence_relics: ResurgenceRelics,
 }
 
+struct Interner<K, V>(HashMap<K, V>);
+impl <K, V>Interner<K, V>
+{
+	fn new() -> Self
+	{
+		Self(HashMap::new())
+	}
+}
+
+impl <K, V>Interner<K, V>
+	where
+		K: Clone + Hash + Eq,
+		V: From<K> + ToOwned<Owned = V> + Clone
+{
+	fn intern(&mut self, k: K) -> V
+	{
+		self.0
+			.entry(k.clone())
+			.or_insert(k.into())
+			.to_owned()
+	}
+}
+
 impl Data
 {
 	pub fn from_cache(cache_dir: &Path) -> Result<Self>
 	{
+		let mut common_names: Interner<String, CommonName> = Interner::new();
+		let mut unique_names: Interner<String, UniqueName> = Interner::new();
 		let index = cache::load_index(&cache_dir.join("index_en.txt.lzma"))?;
 
 		let mut resources = Resources::default();
 		for resource in cache::load_resources(cache_dir, &index["ExportResources_en.json"])?
 		{
-			resources.add(resource.unique_name, resource.name);
+			let common_name = common_names.intern(resource.name);
+			let unique_name = unique_names.intern(resource.unique_name);
+			resources.add(unique_name, common_name);
 		}
 
 		for warframe in cache::load_warframes(cache_dir, &index["ExportWarframes_en.json"])?
 		{
-			let unique_name = warframe.unique_name;
+			let unique_name = unique_names.intern(warframe.unique_name);
 			let common_name = warframe.name
 				.strip_prefix("<ARCHWING> ")
-				.unwrap_or(&warframe.name);
+				.unwrap_or(&warframe.name)
+				.to_owned();
+			let common_name = common_names.intern(common_name);
 			resources.add(unique_name, common_name);
 		}
 
 		for weapon in cache::load_weapons(cache_dir, &index["ExportWeapons_en.json"])?
 		{
-			resources.add(weapon.unique_name, weapon.name);
+			let common_name = common_names.intern(weapon.name);
+			let unique_name = unique_names.intern(weapon.unique_name);
+			resources.add(unique_name, common_name);
 		}
 
 		let mut requires = Requires::default();
 		let mut recipes = Recipes::default();
 		for recipe in cache::load_recipes(cache_dir, &index["ExportRecipes_en.json"])?
 		{
-			let recipe_unique_name = recipe.unique_name.as_ref();
-			recipes.add(recipe_unique_name, recipe.result_type);
+			let recipe_unique_name = unique_names.intern(recipe.unique_name);
+			let recipe_result_type = unique_names.intern(recipe.result_type);
+			recipes.add(recipe_unique_name.clone(), recipe_result_type);
 			for ingredient in recipe.ingredients
 			{
+				let ingredient_item_type = unique_names.intern(ingredient.item_type);
 				requires.add(
-					recipe_unique_name,
-					ingredient.item_type,
+					recipe_unique_name.clone(),
+					ingredient_item_type,
 					ingredient.item_count);
 			}
 		}
@@ -83,9 +118,9 @@ impl Data
 		let mut relic_rewards = RelicRewards::default();
 		for relic in cache::load_relics(cache_dir, &index["ExportRelicArcane_en.json"])?
 		{
-			let relic_unique_name = relic.unique_name;
-			let relic_common_name = relic.name;
-			relics.add(relic_unique_name.as_ref(), relic_common_name);
+			let relic_unique_name = unique_names.intern(relic.unique_name);
+			let relic_common_name = common_names.intern(relic.name);
+			relics.add(relic_unique_name.clone(), relic_common_name);
 			for reward in relic.relic_rewards
 			{
 				let reward_unique_name = reward.reward_name
@@ -94,9 +129,11 @@ impl Data
 					.fold(String::new(), |a, b|a+b+"/");
 				let reward_unique_name = reward_unique_name
 					.strip_suffix('/')
-					.unwrap_or(&reward_unique_name);
+					.unwrap_or(&reward_unique_name)
+					.to_owned();
+				let reward_unique_name = unique_names.intern(reward_unique_name);
 				relic_rewards.add(
-					relic_unique_name.as_ref(),
+					relic_unique_name.clone(),
 					reward_unique_name,
 					reward.rarity);
 			}
