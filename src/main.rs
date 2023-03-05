@@ -128,6 +128,10 @@ fn update_index_if_needed(dir: &Path) -> Result<bool>
 			.context("Downloading new index")?;
 		std::fs::write(index_path, index)
 			.context("Writing new index to disk")?;
+		// FIXME: There's probably a better way to do this that wouldn't require
+		// doing this extra file read.
+		let parsed_index = cache::load_index(dir)?;
+		remove_old_manifests(dir, &parsed_index)?;
 	}
 	Ok(index_out_of_date)
 }
