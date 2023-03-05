@@ -28,7 +28,7 @@ pub struct Ingredient
 	pub item_count: u32,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Recipe>>
+pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Recipe>>
 {
 	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;

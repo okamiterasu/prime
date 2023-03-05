@@ -18,7 +18,7 @@ pub struct Weapon
 	pub name: String,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Weapon>>
+pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Weapon>>
 {
 	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;

@@ -24,7 +24,7 @@ pub struct App
 
 impl App
 {
-	pub(crate) fn with_state(
+	pub fn with_state(
 		db: Data,
 		tracked: Vec<Tracked>,
 		owned: HashMap<UniqueName, u32>,

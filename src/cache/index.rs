@@ -5,7 +5,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 
-pub(crate) fn load(path: &Path) -> Result<HashMap<String, String>>
+pub fn load(path: &Path) -> Result<HashMap<String, String>>
 {
 	let file = File::open(path)
 		.context("Opening compressed manifest file")?;

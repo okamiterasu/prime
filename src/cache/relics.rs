@@ -61,7 +61,7 @@ pub struct Reward
 	pub rarity: Rarity,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Relic>>
+pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Relic>>
 {
 	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;

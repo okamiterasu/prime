@@ -2,7 +2,7 @@ mod droptable;
 mod worldstate;
 mod export;
 
-pub(crate) use droptable::droptable;
-pub(crate) use export::index;
-pub(crate) use export::manifest;
-pub(crate) use worldstate::worldstate;
+pub use droptable::droptable;
+pub use export::index;
+pub use export::manifest;
+pub use worldstate::worldstate;

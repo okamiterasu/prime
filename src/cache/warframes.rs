@@ -20,7 +20,7 @@ pub struct Warframe
 	pub product_category: String
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Warframe>>
+pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Warframe>>
 {
 	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;

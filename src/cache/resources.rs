@@ -18,7 +18,7 @@ pub struct Resource
     pub name: String,
 }
 
-pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Resource>>
+pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Resource>>
 {
 	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;

@@ -3,7 +3,7 @@ use anyhow::{Result, Context};
 const EXPORT: &str = "https://content.warframe.com/PublicExport";
 const MANIFEST_TEMPLATE: &str = "https://content.warframe.com/PublicExport/Manifest";
 
-pub(crate) fn manifest(name: &str) -> Result<String>
+pub fn manifest(name: &str) -> Result<String>
 {
 	let url = format!("{MANIFEST_TEMPLATE}/{name}");
 	ureq::get(&url)

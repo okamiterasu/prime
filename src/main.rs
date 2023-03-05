@@ -37,7 +37,7 @@ fn cache_dir() -> Result<PathBuf>
 }
 
 #[derive(Debug)]
-struct Tracked
+pub struct Tracked
 {
 	common_name: CommonName,
 	unique_name: UniqueName,

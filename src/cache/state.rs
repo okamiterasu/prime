@@ -13,7 +13,7 @@ struct Saved
 	owned: HashMap<UniqueName, u32>,
 }
 
-pub(crate) fn load(
+pub fn load(
 	tracked_path: &Path,
 	db: &mut Data) -> Result<(Vec<crate::Tracked>, HashMap<UniqueName, u32>)>
 {
@@ -31,7 +31,7 @@ pub(crate) fn load(
 	Ok((enriched, parsed.owned))
 }
 
-pub(crate) fn save(
+pub fn save(
 	tracked_path: &Path,
 	tracked: Vec<crate::Tracked>,
 	owned: HashMap<UniqueName, u32>) -> Result<()>

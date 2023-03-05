@@ -2,7 +2,7 @@ use anyhow::{Result, Context};
 
 const DROPTABLE: &str = "https://www.warframe.com/droptables";
 
-pub(crate) fn droptable() -> Result<String>
+pub fn droptable() -> Result<String>
 {
 	ureq::get(DROPTABLE)
 		.call()
