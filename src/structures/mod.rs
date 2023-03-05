@@ -52,7 +52,7 @@ impl <K, V>Interner<K, V>
 impl <K, V>Interner<K, V>
 	where
 		K: Clone + Hash + Eq,
-		V: From<K> + ToOwned<Owned = V> + Clone
+		V: From<K> + Clone
 {
 	fn intern(&mut self, k: K) -> V
 	{
