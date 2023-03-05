@@ -5,7 +5,7 @@ mod relics;
 mod resources;
 mod warframes;
 mod weapons;
-mod load;
+mod manifest;
 mod state;
 mod droptable;
 

@@ -3,7 +3,7 @@ use std::path::{Path};
 use anyhow::{Result, Context, anyhow};
 use serde::{Deserialize};
 
-use super::load;
+use super::manifest;
 use crate::relic::Rarity;
 
 #[derive(Deserialize, Clone, Debug, Default)]
@@ -63,7 +63,7 @@ pub struct Reward
 
 pub(crate) fn load(cache: &Path, manifest: &str) -> Result<Vec<Relic>>
 {
-	let file = load::load(cache, manifest)
+	let file = manifest::load(cache, manifest)
 		.context("Loading manifest")?;
 	let parsed: Export = serde_json::from_str(&file)
 		.context("Parsing manifest")?;
