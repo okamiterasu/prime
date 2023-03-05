@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use crate::relic::Rarity;
 use super::types::UniqueName;
 
+/// (Relic, Reward, Rarity)
+type Row = (UniqueName, UniqueName, Rarity);
+
 #[derive(Default, Debug)]
 pub struct RelicRewards
 {
-	relics: Vec<UniqueName>,
-	rarities: Vec<Rarity>,
-	rewards: Vec<UniqueName>,
+	rows: Vec<Row>,
 	relic_index: HashMap<UniqueName, Vec<usize>>,
 	reward_index: HashMap<UniqueName, Vec<usize>>,
 }
@@ -23,8 +24,8 @@ impl RelicRewards
 			.map(Vec::as_slice)
 			.unwrap_or_default();
 		indices.iter()
-			.flat_map(|&index|Some((self.rewards.get(index)?, self.rarities.get(index)?)))
-			.map(|(reward, &rarity)|(reward.clone(), rarity))
+			.flat_map(|&index|self.rows.get(index))
+			.map(|row|(row.1.clone(), row.2))
 	}
 
 	pub fn fetch_by_reward_unique_name(
@@ -35,8 +36,8 @@ impl RelicRewards
 			.map(Vec::as_slice)
 			.unwrap_or_default();
 		indices.iter()
-			.flat_map(|&index|Some((self.relics.get(index)?, self.rarities.get(index)?)))
-			.map(|(relic, &rarity)|(relic.clone(), rarity))
+			.flat_map(|&index|self.rows.get(index))
+			.map(|row|(row.0.clone(), row.2))
 	}
 
 	pub fn add(
@@ -45,17 +46,19 @@ impl RelicRewards
 		reward_unique_name: UniqueName,
 		reward_rarity: Rarity)
 	{
-		let index = self.relics.len();
-		self.relics.push(relic_unique_name.clone());
+		let index = self.rows.len();
+
+		self.rows.push((
+			relic_unique_name.clone(),
+			reward_unique_name.clone(),
+			reward_rarity));
+
 		self.relic_index.entry(relic_unique_name)
 			.or_default()
 			.push(index);
 
-		self.rewards.push(reward_unique_name.clone());
 		self.reward_index.entry(reward_unique_name)
 			.or_default()
 			.push(index);
-
-		self.rarities.push(reward_rarity);
 	}
 }

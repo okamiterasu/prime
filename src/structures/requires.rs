@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use super::types::{Count, UniqueName};
 
+/// Recipe, Item Type, Count
+type Row = (UniqueName, UniqueName, Count);
+
 #[derive(Default, Debug)]
 pub struct Requires
 {
-	recipe_unique_names: Vec<UniqueName>,
-	item_types: Vec<UniqueName>,
-	count: Vec<Count>,
+	rows: Vec<Row>,
 	recipe_unique_name_index: HashMap<UniqueName, Vec<usize>>,
 	item_type_index: HashMap<UniqueName, usize>,
 }
@@ -22,8 +23,8 @@ impl Requires
 			.map(Vec::as_slice)
 			.unwrap_or_default();
 		indices.iter()
-			.flat_map(|&index|Some((self.item_types.get(index)?, self.count.get(index)?)))
-			.map(|(un, &c)|(un.clone(), c))
+			.flat_map(|&index|self.rows.get(index))
+			.map(|row|(row.1.clone(), row.2))
 	}
 
 	pub fn _fetch_by_item_type(
@@ -31,27 +32,22 @@ impl Requires
 		item_type: UniqueName) -> Option<(UniqueName, Count)>
 	{
 		let &index = self.item_type_index.get(&item_type)?;
-		let recipe_unique_name = self.recipe_unique_names.get(index).cloned()?;
-		let count = self.count.get(index).cloned()?;
-		Some((recipe_unique_name, count))
+		self.rows
+			.get(index)
+			.map(|row|(row.0.clone(), row.2))
 	}
 
 	pub fn add(
 		&mut self,
 		recipe_unique_name: UniqueName,
 		item_type: UniqueName,
-		count: impl Into<Count>)
+		count: Count)
 	{
-		let index = self.recipe_unique_names.len();
-		self.recipe_unique_names.push(recipe_unique_name.clone());
+		let index = self.rows.len();
+		self.rows.push((recipe_unique_name.clone(), item_type.clone(), count));
 		self.recipe_unique_name_index.entry(recipe_unique_name)
 			.or_default()
 			.push(index);
-
-		self.item_types.push(item_type.clone());
 		self.item_type_index.insert(item_type, index);
-
-		let c = count.into();
-		self.count.push(c);
 	}
 }

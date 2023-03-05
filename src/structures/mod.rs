@@ -110,7 +110,7 @@ impl Data
 				requires.add(
 					recipe_unique_name.clone(),
 					ingredient_item_type,
-					ingredient.item_count);
+					ingredient.item_count.into());
 			}
 		}
 

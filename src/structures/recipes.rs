@@ -2,11 +2,13 @@ use std::collections::HashMap;
 
 use super::types::UniqueName;
 
+/// (Unique Name, Result Type)
+type Row = (UniqueName, UniqueName);
+
 #[derive(Default, Debug)]
 pub struct Recipes
 {
-	pub unique_names: Vec<UniqueName>,
-	pub result_types: Vec<UniqueName>,
+	pub rows: Vec<Row>,
 	pub unique_name_index: HashMap<UniqueName, usize>,
 	pub result_type_index: HashMap<UniqueName, Vec<usize>>,
 }
@@ -18,7 +20,7 @@ impl Recipes
 		unique_name: UniqueName) -> Option<UniqueName>
 	{
 		let &i = self.unique_name_index.get(&unique_name)?;
-		self.result_types.get(i).cloned()
+		self.rows.get(i).map(|r|&r.1).cloned()
 	}
 
 	pub fn fetch_by_result_type(
@@ -29,7 +31,8 @@ impl Recipes
 			.map(Vec::as_slice)
 			.unwrap_or_default();
 		indices.iter()
-			.flat_map(|&index|self.unique_names.get(index))
+			.flat_map(|&index|self.rows.get(index))
+			.map(|r|&r.0)
 			.cloned()
 	}
 
@@ -38,10 +41,9 @@ impl Recipes
 		unique_name: UniqueName,
 		result_type: UniqueName)
 	{
-		let index = self.unique_names.len();
-		self.unique_names.push(unique_name.clone());
+		let index = self.rows.len();
+		self.rows.push((unique_name.clone(), result_type.clone()));
 		self.unique_name_index.insert(unique_name, index);
-		self.result_types.push(result_type.clone());
 		self.result_type_index.entry(result_type)
 			.or_default()
 			.push(index);
