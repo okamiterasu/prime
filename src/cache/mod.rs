@@ -8,6 +8,7 @@ mod weapons;
 mod manifest;
 mod state;
 mod droptable;
+mod sentinels;
 
 pub use droptable::active_relics;
 pub use worldstate::resurgence_relics;
@@ -20,3 +21,4 @@ pub use warframes::load as load_warframes;
 pub use weapons::load as load_weapons;
 pub use state::load as load_state;
 pub use state::save as save_state;
+pub use sentinels::load as load_sentinels;

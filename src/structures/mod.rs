@@ -97,6 +97,13 @@ impl Data
 			resources.add(unique_name, common_name);
 		}
 
+		for sentinel in cache::load_sentinels(cache_dir, &index["ExportSentinels_en.json"])?
+		{
+			let common_name = common_names.intern(sentinel.name);
+			let unique_name = unique_names.intern(sentinel.unique_name);
+			resources.add(unique_name, common_name);
+		}
+
 		let mut requires = Requires::default();
 		let mut recipes = Recipes::default();
 		for recipe in cache::load_recipes(cache_dir, &index["ExportRecipes_en.json"])?
