@@ -51,8 +51,8 @@ impl <K, V>Interner<K, V>
 
 impl <K, V>Interner<K, V>
 	where
-		K: Clone + Hash + Eq,
-		V: From<K> + Clone
+		K: Clone + Hash + Eq + Into<V>,
+		V: Clone
 {
 	fn intern(&mut self, k: K) -> V
 	{
