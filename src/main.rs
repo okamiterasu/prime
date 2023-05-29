@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
 
 use anyhow::{anyhow, bail, Context, Result};
 use eframe::egui;
@@ -76,22 +75,18 @@ fn main() -> Result<()>
 	let cache_dir = cache_dir()?;
 	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
 
-	let updated = update_index_if_needed(&cache_dir)
+	update_index(&cache_dir)
 		.context("Checking for manifest updates")?;
 
-	// Should update drop table and world state also
-	if updated
-	{
-		let droptable_path = cache_dir.join("droptable.html");
-		let droptable = live::droptable()
-			.context("Downloading scrape droptable")?;
-		std::fs::write(droptable_path, droptable)?;
+	let droptable_path = cache_dir.join("droptable.html");
+	let droptable = live::droptable()
+		.context("Downloading scrape droptable")?;
+	std::fs::write(droptable_path, droptable)?;
 
-		let worldstate_path = cache_dir.join("worldstate.json");
-		let worldstate = live::worldstate()
-			.context("Downloading world state")?;
-		std::fs::write(worldstate_path, worldstate)?;
-	}
+	let worldstate_path = cache_dir.join("worldstate.json");
+	let worldstate = live::worldstate()
+		.context("Downloading world state")?;
+	std::fs::write(worldstate_path, worldstate)?;
 
 	let mut data = Data::from_cache(&cache_dir)?;
 
@@ -111,31 +106,18 @@ fn main() -> Result<()>
 	Ok(())
 }
 
-const SIX_HOURS: Duration = std::time::Duration::from_secs(60*60*6);
-/// Checks if the cached index manifest is older than six hours.
-/// If so, downloads a new version
-fn update_index_if_needed(dir: &Path) -> Result<bool>
+fn update_index(dir: &Path) -> Result<()>
 {
 	let index_path = dir.join("index_en.txt.lzma");
-	let six_hours_ago = SystemTime::now() - SIX_HOURS;
-	let index_maybe_out_of_date = std::fs::File::open(&index_path)
-		.and_then(|file|file.metadata())
-		.and_then(|metadata|metadata.modified())
-		.map(|last_modified|last_modified < six_hours_ago)
-		.unwrap_or(true);
-
-	if index_maybe_out_of_date
-	{
-		let index = live::index()
-			.context("Downloading new index")?;
-		std::fs::write(&index_path, index)
-			.context("Writing new index to disk")?;
-		// FIXME: There's probably a better way to do this that wouldn't require
-		// doing this extra file read.
-		let parsed_index = cache::load_index(&index_path)?;
-		remove_old_manifests(dir, &parsed_index)?;
-	}
-	Ok(index_maybe_out_of_date)
+	let index = live::index()
+		.context("Downloading new index")?;
+	std::fs::write(&index_path, index)
+		.context("Writing new index to disk")?;
+	// FIXME: There's probably a better way to do this that wouldn't require
+	// doing this extra file read.
+	let parsed_index = cache::load_index(&index_path)?;
+	remove_old_manifests(dir, &parsed_index)?;
+	Ok(())
 }
 
 fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
