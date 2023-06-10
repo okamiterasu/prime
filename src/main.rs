@@ -122,8 +122,9 @@ fn update_index(dir: &Path) -> Result<()>
 
 fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 {
-	for file in std::fs::read_dir(dir)?.flatten()
+	for file in std::fs::read_dir(dir)?
 	{
+		let file = file?;
 		let file_name = file.file_name();
 		let file_name = file_name.to_str()
 			.ok_or_else(||anyhow!("Non-utf8 string"))?;
