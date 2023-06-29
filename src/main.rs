@@ -111,12 +111,12 @@ fn update_index(dir: &Path) -> Result<()>
 	let index_path = dir.join("index_en.txt.lzma");
 	let index = live::index()
 		.context("Downloading new index")?;
-	std::fs::write(&index_path, index)
-		.context("Writing new index to disk")?;
-	// FIXME: There's probably a better way to do this that wouldn't require
-	// doing this extra file read.
-	let parsed_index = cache::load_index(&index_path)?;
+
+	let parsed_index = cache::parse_index(&mut std::io::BufReader::new(index.as_slice()))?;
 	remove_old_manifests(dir, &parsed_index)?;
+
+	std::fs::write(index_path, index)
+		.context("Writing new index to disk")?;
 	Ok(())
 }
 

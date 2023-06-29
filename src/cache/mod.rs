@@ -14,6 +14,7 @@ pub use droptable::active_relics;
 pub use worldstate::resurgence_relics;
 pub use worldstate::invasions;
 pub use index::load as load_index;
+pub use index::parse as parse_index;
 pub use recipes::load as load_recipes;
 pub use relics::load as load_relics;
 pub use resources::load as load_resources;

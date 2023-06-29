@@ -5,6 +5,7 @@ const MANIFEST_TEMPLATE: &str = "https://content.warframe.com/PublicExport/Manif
 
 pub fn manifest(name: &str) -> Result<String>
 {
+	println!("Downloading new manifest: {name}");
 	let url = format!("{MANIFEST_TEMPLATE}/{name}");
 	ureq::get(&url)
 		.call()
