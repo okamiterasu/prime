@@ -34,7 +34,7 @@ impl Recipe
 
 	pub fn with_common_name(db: &Data, unique_name: UniqueName, common_name: CommonName) -> Result<Self>
 	{
-		let recipe_type =  if common_name.as_str().contains("Prime")
+		let recipe_type = if common_name.as_str().contains("Prime")
 		{
 			let active_relics = db.active_relics(unique_name.clone())
 				.unwrap_or_default();
