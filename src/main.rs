@@ -31,8 +31,8 @@ fn cache_dir() -> Result<PathBuf>
 #[cfg(target_os = "linux")]
 fn cache_dir() -> Result<PathBuf>
 {
-	let home = std::env::var("HOME")?
-		.map(PathBuf::from);
+	let home = std::env::var("HOME")
+		.map(PathBuf::from)?;
 	let path = home.push(".cache/primes/");
 	Ok(path)
 }
