@@ -22,19 +22,14 @@ const ICON_DATA: &[u8] = include_bytes!("../icon.png");
 #[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
 {
-	let home = std::env::var("UserProfile")
-		.map(PathBuf::from)?;
-	let path = home.join("primes/");
-	Ok(path)
-}
+	#[cfg(target_os = "windows")]
+	const CACHE_DIR: &str = "primes/";
+	#[cfg(target_os = "linux")]
+	const CACHE_DIR: &str = ".cache/primes/";
 
-#[cfg(target_os = "linux")]
-fn cache_dir() -> Result<PathBuf>
-{
-	let home = std::env::var("HOME")
-		.map(PathBuf::from)?;
-	let path = home.push(".cache/primes/");
-	Ok(path)
+	dirs::home_dir()
+		.context("Could not find Home dir")
+		.map(|h|h.join(CACHE_DIR))
 }
 
 #[derive(Debug)]
