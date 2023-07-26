@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -56,7 +57,7 @@ impl Tracked
 			for (unique_name, count) in db.requirements(recipe_unique_name.clone())
 			{
 				let requirement = Requirement::new(unique_name.clone(), db)
-					.with_context(||format!("Generating component data for {unique_name:?}"))?;
+					.with_context(||format!("Generating component data for {unique_name}"))?;
 				components.push((requirement, count));
 			}
 			recipes.push((recipe, components));
@@ -88,8 +89,17 @@ fn main() -> Result<()>
 	let mut data = Data::from_cache(&cache_dir)?;
 
 	let tracked_path = cache_dir.join("tracked.json");
-	let (tracked, owned) = cache::load_state(&tracked_path, &mut data)
-		.context("Loading tracked file")?;
+	let (tracked, owned) = match cache::load_state(&tracked_path, &mut data)
+		.context("Loading tracked file")
+	{
+			Ok(to) => to,
+			Err(e) if e.downcast_ref::<io::Error>().map(|e|e.kind()) == Some(io::ErrorKind::NotFound) =>
+			{
+				eprintln!("Could not find tracked file. A new one will be created");
+				(Vec::default(), HashMap::default())
+			},
+			Err(e) => bail!(e)
+	};
 
 	let opts = eframe::NativeOptions
 	{
@@ -110,7 +120,7 @@ fn update_index(dir: &Path) -> Result<()>
 	let index = live::index()
 		.context("Downloading new index")?;
 
-	let parsed_index = cache::parse_index(&mut std::io::BufReader::new(index.as_slice()))?;
+	let parsed_index = cache::parse_index(&mut io::BufReader::new(index.as_slice()))?;
 	remove_old_manifests(dir, &parsed_index)?;
 
 	std::fs::write(index_path, index)
