@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result};
 use scraper::{Html, Selector};
 
 fn is_relic(item: &str) -> bool
@@ -20,9 +20,11 @@ pub fn active_relics(file_path: &Path) -> Result<Vec<String>>
 	}
 	let contents = std::fs::read_to_string(file_path)?;
 	let parsed = Html::parse_document(&contents);
-	let table_selector = Selector::parse(r#"#missionRewards~table"#).unwrap();
-	let table = parsed.select(&table_selector).next()
-		.ok_or_else(||anyhow!("Could not find the mission rewards table"))?;
+	let table_selector = Selector::parse(r#"#missionRewards~table"#)
+		.unwrap();
+	let table = parsed.select(&table_selector)
+		.next()
+		.context("Could not find the mission rewards table")?;
 	let relic_selector = Selector::parse(r#"td"#).unwrap();
 	let relics = table.select(&relic_selector)
 		.flat_map(|e|e.text().next())

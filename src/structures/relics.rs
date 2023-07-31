@@ -19,8 +19,7 @@ impl Relics
 		unique_name: UniqueName) -> Option<CommonName>
 	{
 		let &index = self.unique_name_index.get(&unique_name)?;
-		self.rows
-			.get(index)
+		self.rows.get(index)
 			.map(|r|&r.1)
 			.cloned()
 	}
@@ -30,8 +29,7 @@ impl Relics
 		common_name: CommonName) -> Option<UniqueName>
 	{
 		let &index = self.common_name_index.get(&common_name)?;
-		self.rows
-			.get(index)
+		self.rows.get(index)
 			.map(|r|&r.0)
 			.cloned()
 	}

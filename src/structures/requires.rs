@@ -32,8 +32,7 @@ impl Requires
 		item_type: UniqueName) -> Option<(UniqueName, Count)>
 	{
 		let &index = self.item_type_index.get(&item_type)?;
-		self.rows
-			.get(index)
+		self.rows.get(index)
 			.map(|row|(row.0.clone(), row.2))
 	}
 

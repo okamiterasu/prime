@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use eframe::egui;
 
 use crate::recipe::Recipe;
@@ -71,7 +72,7 @@ impl Tracked
 fn main() -> Result<()>
 {
 	let cache_dir = cache_dir()?;
-	if !cache_dir.exists() {std::fs::create_dir_all(&cache_dir)?;}
+	if !cache_dir.exists() {fs::create_dir_all(&cache_dir)?;}
 
 	update_index(&cache_dir)
 		.context("Checking for manifest updates")?;
@@ -79,12 +80,12 @@ fn main() -> Result<()>
 	let droptable_path = cache_dir.join("droptable.html");
 	let droptable = live::droptable()
 		.context("Downloading scrape droptable")?;
-	std::fs::write(droptable_path, droptable)?;
+	fs::write(droptable_path, droptable)?;
 
 	let worldstate_path = cache_dir.join("worldstate.json");
 	let worldstate = live::worldstate()
 		.context("Downloading world state")?;
-	std::fs::write(worldstate_path, worldstate)?;
+	fs::write(worldstate_path, worldstate)?;
 
 	let mut data = Data::from_cache(&cache_dir)?;
 
@@ -96,12 +97,12 @@ fn main() -> Result<()>
 			Err(e) if e.downcast_ref::<io::Error>().map(|e|e.kind()) == Some(io::ErrorKind::NotFound) =>
 			{
 				eprintln!("Could not find tracked file. A new one will be created");
-				(Vec::default(), HashMap::default())
+				Default::default()
 			},
 			Err(e) => bail!(e)
 	};
 
-	let opts = eframe::NativeOptions
+	let native_options = eframe::NativeOptions
 	{
 		initial_window_size: Some(egui::Vec2::new(1024.0, 768.0)),
 		icon_data: eframe::IconData::try_from_png_bytes(ICON_DATA).ok(),
@@ -109,7 +110,7 @@ fn main() -> Result<()>
 	};
 	eframe::run_native(
 		"Recipe Tracker",
-		opts,
+		native_options,
 		Box::new(|_cc| Box::new(ui::App::with_state(data, tracked, owned, cache_dir)))).unwrap();
 	Ok(())
 }
@@ -123,25 +124,25 @@ fn update_index(dir: &Path) -> Result<()>
 	let parsed_index = cache::parse_index(&mut io::BufReader::new(index.as_slice()))?;
 	remove_old_manifests(dir, &parsed_index)?;
 
-	std::fs::write(index_path, index)
+	fs::write(index_path, index)
 		.context("Writing new index to disk")?;
 	Ok(())
 }
 
 fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<()>
 {
-	for file in std::fs::read_dir(dir)?
+	for file in fs::read_dir(dir)?
 	{
 		let file = file?;
 		let file_name = file.file_name();
 		let file_name = file_name.to_str()
-			.ok_or_else(||anyhow!("Non-utf8 string"))?;
+			.context("Non-utf8 string")?;
 
 		if file_name.starts_with("Export")
 			&& file_name != index[&file_name[0..file_name.len()-26]]
 		{
 			println!("Deleting stale manifest: {file_name}");
-			std::fs::remove_file(file.path())
+			fs::remove_file(file.path())
 				.with_context(||format!("Deleting file: {:?}", file.file_name()))?;
 		}
 	}

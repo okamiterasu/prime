@@ -99,7 +99,7 @@ fn header(
 				
 			}
 			add_search.clear();
-			tracked.sort_by(|a, b|a.common_name.cmp(&b.common_name));
+			tracked.sort_by(|a, b| a.common_name.cmp(&b.common_name));
 		}
 	});
 }
@@ -164,12 +164,10 @@ fn component_group(
 	item: impl ItemView,
 	required: Count)
 {
-	let owned = owned_components
-		.entry(item.unique_name())
+	let owned = owned_components.entry(item.unique_name())
 		.or_default();
 	let fullfilled = *owned >= required.to_u32();
-	let color = fullfilled
-		.then_some(Color32::BLACK)
+	let color = fullfilled.then_some(Color32::BLACK)
 		.unwrap_or_else(||ui.visuals().text_color());
 
 	ui.vertical(|ui|

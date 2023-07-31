@@ -22,8 +22,7 @@ where
 		.context("Decompressing manifest file")?;
 	let decoded = String::from_utf8(decompressed)
 		.context("Parsing decompressed manifest file")?;
-	decoded
-		.lines()
+	decoded.lines()
 		.map(|l|(&l[0..l.len()-26], l))
 		.map(|(k, v)|Ok((k.to_string(), v.to_string())))
 		.collect()

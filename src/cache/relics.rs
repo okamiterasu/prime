@@ -1,7 +1,7 @@
-use std::path::{Path};
+use std::path::Path;
 
 use anyhow::{Result, Context, anyhow};
-use serde::{Deserialize};
+use serde::Deserialize;
 
 use super::manifest;
 use crate::relic::Rarity;
