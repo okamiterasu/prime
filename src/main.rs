@@ -66,7 +66,10 @@ impl Tracked
 			recipes.push((recipe, components));
 		}
 
-		if recipes.is_empty() {bail!("Recipe not found for {unique_name}")}
+		if recipes.is_empty()
+		{
+			bail!("Recipe not found for {unique_name}")
+		}
 		Ok(Self{common_name, unique_name, recipes})
 	}
 }
@@ -74,7 +77,10 @@ impl Tracked
 fn main() -> Result<()>
 {
 	let cache_dir = cache_dir()?;
-	if !cache_dir.exists() {fs::create_dir_all(&cache_dir)?;}
+	if !cache_dir.exists()
+	{
+		fs::create_dir_all(&cache_dir)?;
+	}
 
 	update_index(&cache_dir)
 		.context("Checking for manifest updates")?;

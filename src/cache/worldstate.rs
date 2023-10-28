@@ -78,12 +78,17 @@ pub fn invasions(file_path: &Path) -> Result<Vec<String>>
 
 	let reader = BufReader::new(File::open(file_path)?);
 	let world_state: State = serde_json::from_reader(reader)?;
-	let invasions = world_state.invasions.into_iter();
-	let faction_rewards = invasions.flat_map(|i|
-		i.attacker_reward.into_reward().counted_items.into_iter()
-			.chain(i.defender_reward.into_reward().counted_items.into_iter()));
-	let rewards = faction_rewards.map(|i|i.item_type);
-	Ok(rewards.collect())
+	let faction_rewards = world_state.invasions.into_iter()
+		.flat_map(|invasion|
+		{
+			let attacker_rewards = invasion.attacker_reward.into_reward()
+				.counted_items;
+			let defender_rewards = invasion.defender_reward.into_reward()
+				.counted_items;
+			attacker_rewards.into_iter().chain(defender_rewards)
+		});
+	let rewards = faction_rewards.map(|i|i.item_type).collect();
+	Ok(rewards)
 }
 
 #[derive(Deserialize, Debug)]

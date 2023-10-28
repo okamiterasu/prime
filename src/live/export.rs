@@ -21,7 +21,7 @@ pub fn index() -> Result<Vec<u8>>
 		.call()
 		.context("Sending GET request for manifest index")?;
 	let payload_size: usize = response.header("Content-Length")
-		.context("Content-Length header does not exist")
+		.context("Could not read Content-Length")
 		.and_then(|cl|cl.parse().context("Could not parse Content-Length"))
 		.unwrap_or(0);
 	let mut payload = Vec::with_capacity(payload_size);
