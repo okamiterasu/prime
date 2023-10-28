@@ -20,7 +20,11 @@ pub fn index() -> Result<Vec<u8>>
 	let response = ureq::get(&index_url)
 		.call()
 		.context("Sending GET request for manifest index")?;
-	let mut payload = vec![];
+	let payload_size: usize = response.header("Content-Length")
+		.context("Content-Length header does not exist")
+		.and_then(|cl|cl.parse().context("Could not parse Content-Length"))
+		.unwrap_or(0);
+	let mut payload = Vec::with_capacity(payload_size);
 	response.into_reader()
 		.read_to_end(&mut payload)
 		.context("Reading response payload")?;
