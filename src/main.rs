@@ -21,7 +21,7 @@ mod requirement;
 mod structures;
 mod ui;
 
-const ICON_DATA: &[u8] = include_bytes!("../icon.png");
+const ICON_BYTES: &[u8] = include_bytes!("../icon.png");
 
 #[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
@@ -110,10 +110,13 @@ fn main() -> Result<()>
 			Err(e) => bail!(e)
 	};
 
+	let icon = eframe::icon_data::from_png_bytes(ICON_BYTES)?;
+	let viewport = egui::ViewportBuilder::default()
+		.with_inner_size([1920.0, 1080.0])
+		.with_icon(icon);
 	let native_options = eframe::NativeOptions
 	{
-		initial_window_size: Some(egui::Vec2::new(1024.0, 768.0)),
-		icon_data: eframe::IconData::try_from_png_bytes(ICON_DATA).ok(),
+		viewport,
 		..Default::default()
 	};
 	eframe::run_native(
