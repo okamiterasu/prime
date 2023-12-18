@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
 use std::fs;
@@ -66,10 +66,7 @@ impl Tracked
 			recipes.push((recipe, components));
 		}
 
-		if recipes.is_empty()
-		{
-			bail!("Recipe not found for {unique_name}")
-		}
+		anyhow::ensure!(!recipes.is_empty(), format!("Recipe not found for {unique_name}"));
 		Ok(Self{common_name, unique_name, recipes})
 	}
 }
@@ -154,7 +151,7 @@ fn remove_old_manifests(dir: &Path, index: &HashMap<String, String>) -> Result<(
 		{
 			println!("Deleting stale manifest: {file_name}");
 			fs::remove_file(file.path())
-				.with_context(||format!("Deleting file: {:?}", file.file_name()))?;
+				.with_context(||format!("Deleting file: {file_name}"))?;
 		}
 	}
 	Ok(())

@@ -18,7 +18,7 @@ pub(super) fn load(cache: &Path, manifest: &str) -> Result<String>
 		}
 	};
 	
-	// Provided files tend to have erroneous Windows newlines that can break
+	// Provided files tend to have erroneous control characters that break
 	// parsing and deserialization
 	let escaped = file.replace("\r\n", "");
 	Ok(escaped)
