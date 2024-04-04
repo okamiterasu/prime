@@ -37,7 +37,7 @@ impl RewardOrEmptyVec
 		match self
 		{
 			Self::Reward(r)=>r,
-			Self::EmptyVec(_)=>Reward::default()
+			Self::EmptyVec(_empty_vec)=>Reward::default()
 		}
 	}
 }
