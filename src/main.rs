@@ -23,7 +23,6 @@ mod ui;
 
 const ICON_BYTES: &[u8] = include_bytes!("../icon.png");
 
-#[cfg(target_os = "windows")]
 fn cache_dir() -> Result<PathBuf>
 {
 	#[cfg(target_os = "windows")]
