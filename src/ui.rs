@@ -238,7 +238,7 @@ fn component_group(
 
 		if item.available_from_invasion()
 		{
-			ui.label("Invastion");
+			ui.label("Invasion");
 		}
 	});
 }

@@ -9,13 +9,13 @@ use serde::Deserialize;
 #[serde(rename_all = "PascalCase")]
 struct State
 {
-	invasions: Vec<Invastion>,
+	invasions: Vec<Invasion>,
 	prime_vault_traders: Vec<PrimeVaultTrader>
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct Invastion
+struct Invasion
 {
 	_faction: InvasionFaction,
 	attacker_reward: RewardOrEmptyVec,
