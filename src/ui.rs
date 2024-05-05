@@ -202,7 +202,7 @@ fn component_group(
 		{
 			ui.vertical(|ui|
 			{
-				for relic in item.active_relics()
+				for relic in active_relics
 				{
 					let color = match relic.rarity
 					{
