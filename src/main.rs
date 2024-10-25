@@ -118,7 +118,7 @@ fn main() -> Result<()>
 	eframe::run_native(
 		"Recipe Tracker",
 		native_options,
-		Box::new(|_cc| Box::new(ui::App::with_state(data, tracked, owned, cache_dir)))).unwrap();
+		Box::new(|_cc| Ok(Box::new(ui::App::with_state(data, tracked, owned, cache_dir))))).unwrap();
 	Ok(())
 }
 

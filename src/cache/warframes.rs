@@ -17,7 +17,7 @@ pub struct Warframe
 {
 	pub unique_name: String,
 	pub name: String,
-	pub product_category: String
+	// pub product_category: String
 }
 
 pub fn load(cache: &Path, manifest: &str) -> Result<Vec<Warframe>>
