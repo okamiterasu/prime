@@ -7,6 +7,7 @@ pub fn worldstate() -> Result<String>
 	ureq::get(WORLDSTATE)
 		.call()
 		.context("Sending GET request for the worldstate")?
-		.into_string()
+		.into_body()
+		.read_to_string()
 		.context("Parsing response from worldstate GET")
 }

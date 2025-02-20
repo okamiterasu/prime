@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-ureq = { version = "2.9", features = ["json"] }
+ureq = { version = "3.0", features = ["json"] }
 lzma-rs = "0.3"
-scraper = "0.20"
+scraper = "0.22"
 anyhow = { version="1.0", features=["backtrace"] }
-eframe = "0.29"
-dirs = "5.0"
-convert_case = "0.6"
+eframe = "0.31"
+dirs = "6.0"
+convert_case = "0.7"

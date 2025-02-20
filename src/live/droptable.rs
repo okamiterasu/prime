@@ -7,7 +7,8 @@ pub fn droptable() -> Result<String>
 	ureq::get(DROPTABLE)
 		.call()
 		.context("Sending GET request for the droptable")?
-		.into_string()
+		.into_body()
+		.read_to_string()
 		.context("Parsing response from droptable GET")
 }
 
