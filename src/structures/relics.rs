@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::types::{UniqueName, CommonName};
 
 type Row = (UniqueName, CommonName);
@@ -7,9 +5,7 @@ type Row = (UniqueName, CommonName);
 #[derive(Default, Debug)]
 pub struct Relics
 {
-	rows: Vec<Row>,
-	unique_name_index: HashMap<UniqueName, usize>,
-	common_name_index: HashMap<CommonName, usize>,
+	rows: Vec<Row>
 }
 
 impl Relics
@@ -18,19 +14,11 @@ impl Relics
 		&self,
 		unique_name: UniqueName) -> Option<CommonName>
 	{
-		let &index = self.unique_name_index.get(&unique_name)?;
-		self.rows.get(index)
-			.map(|r|&r.1)
-			.cloned()
-	}
-
-	pub fn _fetch_by_common_name(
-		&self,
-		common_name: CommonName) -> Option<UniqueName>
-	{
-		let &index = self.common_name_index.get(&common_name)?;
-		self.rows.get(index)
-			.map(|r|&r.0)
+		self.rows
+			.iter()
+			.filter(|row|row.0.as_str().eq_ignore_ascii_case(unique_name.as_str()))
+			.map(|row|&row.1)
+			.next()
 			.cloned()
 	}
 
@@ -39,9 +27,6 @@ impl Relics
 		unique_name: UniqueName,
 		common_name: CommonName)
 	{
-		let index = self.rows.len();
 		self.rows.push((unique_name.clone(), common_name.clone()));
-		self.unique_name_index.insert(unique_name, index);
-		self.common_name_index.insert(common_name, index);
 	}
 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::types::UniqueName;
 
 /// (Unique Name, Result Type)
@@ -8,9 +6,7 @@ type Row = (UniqueName, UniqueName);
 #[derive(Default, Debug)]
 pub struct Recipes
 {
-	pub rows: Vec<Row>,
-	pub unique_name_index: HashMap<UniqueName, usize>,
-	pub result_type_index: HashMap<UniqueName, Vec<usize>>,
+	pub rows: Vec<Row>
 }
 
 impl Recipes
@@ -19,20 +15,23 @@ impl Recipes
 		&self,
 		unique_name: UniqueName) -> Option<UniqueName>
 	{
-		let &i = self.unique_name_index.get(&unique_name)?;
-		self.rows.get(i).map(|r|&r.1).cloned()
+		let unique_name = unique_name.as_str();
+		self.rows
+			.iter()
+			.filter(|row|row.0.as_str().eq_ignore_ascii_case(unique_name))
+			.map(|row|&row.1)
+			.next()
+			.cloned()
 	}
 
 	pub fn fetch_by_result_type(
 		&self,
 		result_type: UniqueName) -> impl Iterator<Item = UniqueName> + '_
 	{
-		let indices = self.result_type_index.get(&result_type)
-			.map(Vec::as_slice)
-			.unwrap_or_default();
-		indices.iter()
-			.flat_map(|&index|self.rows.get(index))
-			.map(|r|&r.0)
+		self.rows
+			.iter()
+			.filter(move |&row|row.1.as_str() == result_type.as_str())
+			.map(|row|&row.0)
 			.cloned()
 	}
 
@@ -41,11 +40,6 @@ impl Recipes
 		unique_name: UniqueName,
 		result_type: UniqueName)
 	{
-		let index = self.rows.len();
 		self.rows.push((unique_name.clone(), result_type.clone()));
-		self.unique_name_index.insert(unique_name, index);
-		self.result_type_index.entry(result_type)
-			.or_default()
-			.push(index);
 	}
 }

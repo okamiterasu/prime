@@ -20,7 +20,7 @@ impl Resources
 			.iter()
 			.filter(|row|row.0.as_str().eq_ignore_ascii_case(unique_name))
 			.map(|row|&row.1)
-			.nth(0)
+			.next()
 			.cloned()
 	}
 
