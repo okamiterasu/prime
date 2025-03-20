@@ -8,7 +8,6 @@ use crate::relic::Rarity;
 use crate::structures::{Count, UniqueName};
 use crate::Tracked;
 
-use convert_case::{Case, Casing};
 use eframe::egui;
 use egui::Ui;
 use egui::Color32;
