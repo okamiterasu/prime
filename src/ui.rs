@@ -91,8 +91,7 @@ fn header(
 		ui.text_edit_singleline(add_search);
 		if ui.button("Add").clicked()
 		{
-			let common_name = add_search.from_case(Case::Title).to_case(Case::Title);
-			if let Some(unique_name) = db.resource_unique_name(common_name.as_str())
+			if let Some(unique_name) = db.resource_unique_name(add_search.as_str())
 			{
 				if let Ok(t) = Tracked::new(db, unique_name)
 				{

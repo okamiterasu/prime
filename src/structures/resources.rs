@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::types::{UniqueName, CommonName};
 
 
@@ -8,9 +6,7 @@ type Row = (UniqueName, CommonName);
 #[derive(Default, Debug)]
 pub struct Resources
 {
-	rows: Vec<Row>,
-	unique_name_index: HashMap<UniqueName, usize>,
-	common_name_index: HashMap<CommonName, usize>,
+	rows: Vec<Row>
 }
 
 impl Resources
@@ -19,9 +15,12 @@ impl Resources
 		&self,
 		unique_name: UniqueName) -> Option<CommonName>
 	{
-		let &index = self.unique_name_index.get(&unique_name)?;
-		self.rows.get(index)
+		let unique_name = unique_name.as_str();
+		self.rows
+			.iter()
+			.filter(|row|row.0.as_str().eq_ignore_ascii_case(unique_name))
 			.map(|row|&row.1)
+			.nth(0)
 			.cloned()
 	}
 
@@ -29,17 +28,17 @@ impl Resources
 		&self,
 		common_name: CommonName) -> Option<UniqueName>
 	{
-		let &index = self.common_name_index.get(&common_name)?;
-		self.rows.get(index)
+		let common_name = common_name.as_str();
+		self.rows
+			.iter()
+			.filter(|row|row.1.as_str().eq_ignore_ascii_case(common_name))
 			.map(|row|&row.0)
+			.nth(0)
 			.cloned()
 	}
 
 	pub fn add(&mut self, unique_name: UniqueName, common_name: CommonName)
 	{
-		let index = self.rows.len();
 		self.rows.push((unique_name.clone(), common_name.clone()));
-		self.unique_name_index.insert(unique_name, index);
-		self.common_name_index.insert(common_name, index);
 	}
 }
